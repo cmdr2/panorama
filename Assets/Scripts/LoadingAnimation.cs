@@ -1,6 +1,11 @@
 ﻿using UnityEngine;
 using System.Collections;
 
+/**
+ * Throbbing animation for status messages
+ * 
+ * by cmdr2 <secondary.cmdr2@gmail.com>
+ */
 public class LoadingAnimation : MonoBehaviour {
 
 	/* globals */

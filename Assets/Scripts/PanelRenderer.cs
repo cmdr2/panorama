@@ -4,9 +4,13 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
 /**
+ * Main class for fetching and rendering panoramas
+ * 
  * Controls:
  *  - Single 'Ctrl' press = turn around 180 degrees
  *  - Double 'Ctrl' press = load new images
+ * 
+ * by cmdr2 <secondary.cmdr2@gmail.com>
  */
 public class PanelRenderer : MonoBehaviour {
 

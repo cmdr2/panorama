@@ -1,6 +1,11 @@
 ﻿using UnityEngine;
 using System.Collections;
 
+/**
+ * Autohiding animation for title and author message
+ * 
+ * by cmdr2 <secondary.cmdr2@gmail.com>
+ */
 public class TitleAnimation : MonoBehaviour {
 
 	/* globals */

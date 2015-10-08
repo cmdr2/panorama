@@ -2,6 +2,11 @@
 using System.Collections;
 using System.IO;
 
+/**
+ * Helper class for boilerplate analytics
+ * 
+ * by cmdr2 <secondary.cmdr2@gmail.com>
+ */
 [RequireComponent(typeof(GoogleAnalyticsV3))]
 public class Analytics : MonoBehaviour {
 
