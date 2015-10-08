@@ -21,7 +21,7 @@ feel free to contribute or fork to create your own panoramas application for per
 
 ## development
 * install [Unity 5.x](https://unity3d.com/get-unity/download) (free or pro)
-* `git clone git@github.com:cmdr2/panoramas.git`
+* `git clone git@github.com:cmdr2/panorama.git`
 * open the downloaded panoramas project in Unity
 * press the play button to run
 * `Assets/Scripts/PanelRenderer.cs` contains the core logic
