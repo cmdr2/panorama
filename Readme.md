@@ -1,4 +1,4 @@
-## panoramas
+## panorama
 
 fast, infinite panoramas from flickr for Google Cardboard using Unity 5.2
 
