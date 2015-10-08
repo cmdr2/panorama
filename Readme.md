@@ -8,10 +8,10 @@ feel free to contribute or fork to create your own panoramas application for per
   * supports equirectangular projection panoramas
   * uses a high-poly sphere to confine image distortion to a narrow range around the poles (± 4°)
   * progressive loading of image by resolution to speed up time-to-first-pixel
-  * provides control to turn panorama 180° to help seated users look behind them
+  * provides control to turn panorama by 180° to help seated users look behind them
   * provides control to load a random new panorama
   * includes Google Analytics with anonymized IPs to help monitor errors and application performance in the real world
-  * displays title and author, and autohides below users's feet
+  * displays title and author, and autohides below users' feet
   * example datasource fetches random panoramas from flickr
   * flickr contains >14k equirectangular panoramas, so ~2 years worth of fresh panoramas for casual users
   * generates base58 flickr url links to credit respective authors
