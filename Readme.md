@@ -8,19 +8,19 @@ feel free to contribute or fork to create your own panoramas application for per
   * supports equirectangular projection panoramas
   * uses a high-poly sphere to confine image distortion to a narrow range around the poles (± 4°)
   * progressive loading of image by resolution to speed up time-to-first-pixel
-  * provides control to turn panorama 180° to help seated viewers look behind them
+  * provides control to turn panorama 180° to help seated users look behind them
   * provides control to load a random new panorama
   * includes Google Analytics with anonymized IPs to help monitor errors and application performance in the real world
-  * displays title and author, and autohides below viewer's feet
+  * displays title and author, and autohides below users's feet
   * example datasource fetches random panoramas from flickr
-  * flickr contains >14k equirectangular panoramas, so ~2 years worth of fresh panoramas for casual viewers
+  * flickr contains >14k equirectangular panoramas, so ~2 years worth of fresh panoramas for casual users
   * generates base58 flickr url links to credit respective authors
 
 ## examples
 1. [Virtual Places](https://play.google.com/store/apps/details?id=org.cmdr2.places)
 
 ## development
-* install [Unity 5.x](https://unity3d.com/get-unity/download)
+* install [Unity 5.x](https://unity3d.com/get-unity/download) (free or pro)
 * `git clone git@github.com:cmdr2/panoramas.git`
 * open the downloaded panoramas project in Unity
 * press the play button to run
