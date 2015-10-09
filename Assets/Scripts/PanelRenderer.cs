@@ -62,6 +62,7 @@ public class PanelRenderer : MonoBehaviour {
 		statusMessage = GameObject.Find ("StatusMessage").GetComponent<TextMesh>();
 		titleMessage = GameObject.Find ("TitleMessage");
 		analytics = GameObject.Find ("Analytics").GetComponent<Analytics>();
+		analytics.Init ();
 
 		StartCoroutine (Fetch ());
 	}
@@ -105,14 +106,25 @@ public class PanelRenderer : MonoBehaviour {
 	private IEnumerator Fetch() {
 		analytics.LogEvent ("Panorama", "Requested");
 		taskQueue = new List<object> ();
-		statusMessage.text = "Waiting for www.flickriver.com...";
+		WWW www;
+		ImageInfo flickrImage;
 
-		/* fetch new images */
-		WWW www = new WWW(IMAGES_URL);
-		print ("Fetching page: " + IMAGES_URL);
-		yield return www;
+		// first try recommendation
+		print ("Fetch " + analytics.viewCount);
+		flickrImage = GetRecommendedImage (analytics.viewCount);
+		// else get random
+		if (flickrImage == null) {
+			analytics.LogEvent ("Panorama", "FetchingRandom");
+			statusMessage.text = "Waiting for www.flickriver.com...";
 
-		ImageInfo flickrImage = ExtractFromFlickriver (www.text);
+			www = new WWW (IMAGES_URL);
+			print ("Fetching page: " + IMAGES_URL);
+			yield return www;
+
+			flickrImage = ExtractFromFlickriver (www.text);
+		} else {
+			analytics.LogEvent("Panorama", "FetchingRecommendation" + analytics.viewCount);
+		}
 
 		if (flickrImage != null) {
 			www = new WWW (flickrImage.url);
@@ -132,6 +144,7 @@ public class PanelRenderer : MonoBehaviour {
 			ShowInfo (flickrImage);
 
 			/* log */
+			analytics.LogViewCount();
 			analytics.LogEvent ("Panorama", "ImagesLoading");
 		} else {
 			statusMessage.text = "Failed to find a panorama to show!";
@@ -155,7 +168,11 @@ public class PanelRenderer : MonoBehaviour {
 			return null;
 		}
 	}
-		
+
+	private ImageInfo GetRecommendedImage (int idx) {
+		return (idx >= 0 && idx < Recommendations.interesting.Length ? Recommendations.interesting [idx] : null);
+	}
+
 	private List<PanoramaImage> ExtractFromFlickr(string body) {
 		if (body == null) {
 			return new List<PanoramaImage>();
@@ -325,11 +342,26 @@ class PanoramaImage {
 	public List<string> url = new List<string>();
 }
 
-class ImageInfo {
+public class ImageInfo {
 	public string url;
 	public string author;
 	public string title;
 	public long imageId;
+
+	public ImageInfo() {}
+
+	public ImageInfo(string url, string author, string title) {
+		this.url = url;
+		this.author = author;
+		this.title = title;
+	}
+
+	public ImageInfo(string url, string author, string title, long imageId) {
+		this.url = url;
+		this.author = author;
+		this.title = title;
+		this.imageId = imageId;
+	}
 }
 
 class ShowTutorialTask {}
