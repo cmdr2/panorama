@@ -11,14 +11,25 @@ using System.IO;
 public class Analytics : MonoBehaviour {
 
 	/* extern */
+	public string preProdTrackingCode;
+
+	[HideInInspector]
 	public GoogleAnalyticsV3 gav3;
+	[HideInInspector]
 	public string sessionId = "";
+	[HideInInspector]
 	public string userId = "";
+	[HideInInspector]
 	public int sessionCount = 0;
+	[HideInInspector]
 	public bool firstTimeUser;
+	[HideInInspector]
 	public bool tutorialOneFinished;
+	[HideInInspector]
 	public bool tutorialOneRepeatFinished;
+	[HideInInspector]
 	public bool tutorialTwoFinished;
+	[HideInInspector]
 	public int viewCount = 0;
 
 
@@ -51,6 +62,10 @@ public class Analytics : MonoBehaviour {
 			VIEW_COUNT_FILE = Application.persistentDataPath + Path.DirectorySeparatorChar + "VC";
 
 			gav3 = GetComponent<GoogleAnalyticsV3> ();
+
+			if (Application.isEditor) {
+				gav3.androidTrackingCode = gav3.otherTrackingCode = preProdTrackingCode;
+			}
 
 			// check and register repeat user
 			if (File.Exists(PLAYER_FILE)) {
@@ -91,7 +106,6 @@ public class Analytics : MonoBehaviour {
 				viewCount = int.Parse(sr.ReadLine());
 				sr.Close();
 			}
-			print ("ana " + viewCount);
 		} catch (System.Exception e) {
 			LogException(e.Message, true);
 		}
