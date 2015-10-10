@@ -128,16 +128,26 @@ public class PanelRenderer : MonoBehaviour {
 		// first try recommendation
 		print ("Fetch " + analytics.viewCount);
 		flickrImage = GetRecommendedImage (analytics.viewCount);
+
 		// else get random
 		if (flickrImage == null) {
 			analytics.LogEvent ("Panorama", "FetchingRandom");
 			statusMessage.text = "Waiting for www.flickriver.com...";
 
-			www = new WWW (IMAGES_URL);
-			print ("Fetching page: " + IMAGES_URL);
-			yield return www;
+			bool censored;
 
-			flickrImage = ExtractFromFlickriver (www.text);
+			do {
+				www = new WWW (IMAGES_URL);
+				print ("Fetching page: " + IMAGES_URL);
+				yield return www;
+
+				flickrImage = ExtractFromFlickriver (www.text);
+				if (flickrImage != null) {
+					flickrImage.imageId = ExtractIdFromFlickrUrl(flickrImage.url);
+				}
+
+				censored = IsCensored(flickrImage);
+			} while (censored);
 		} else {
 			analytics.LogEvent("Panorama", "FetchingRecommendation" + analytics.viewCount);
 		}
@@ -149,7 +159,6 @@ public class PanelRenderer : MonoBehaviour {
 			yield return www;
 
 			images = ExtractFromFlickr (www.text);
-			flickrImage.imageId = ExtractIdFromFlickrUrl(flickrImage.url);
 			www = null;
 
 			statusMessage.text = "";
@@ -187,6 +196,14 @@ public class PanelRenderer : MonoBehaviour {
 
 	private ImageInfo GetRecommendedImage (int idx) {
 		return (idx >= 0 && idx < Recommendations.interesting.Length ? Recommendations.interesting [idx] : null);
+	}
+	
+	private bool IsCensored(ImageInfo image) {
+		if (image == null) {
+			return false;
+		}
+
+		return Recommendations.censored.Contains (image.imageId);
 	}
 
 	private List<PanoramaImage> ExtractFromFlickr(string body) {
