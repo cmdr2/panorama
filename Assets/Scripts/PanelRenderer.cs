@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using System.Diagnostics;
 
 /**
  * Main class for fetching and rendering panoramas
@@ -30,6 +31,7 @@ public class PanelRenderer : MonoBehaviour {
 	private const float ROTATION_SPEED = 180 / ROTATION_DURATION; // degrees per second
 	private const float DOUBLE_TRIGGER_INTERVAL = 1.5f; // seconds
 	private const float HEALTH_CHECK_INTERVAL = 5; // seconds
+	private const float FIRST_IMAGE_LOAD_TIMEOUT_DURATION = 6; // seconds
 
 	private const string TUTORIAL_ONE_TXT = "<b>Let's try something!</b>\nPush down and leave " +
 		"trigger TWICE\nto load new images anytime.\n<i>(or</i> press Fire1 TWICE)";
@@ -49,6 +51,7 @@ public class PanelRenderer : MonoBehaviour {
 	private float rotation = 0f;
 	private Quaternion targetRotation;
 	private AudioSource fetchAudio;
+	private float firstImageLoadTimeout = -1; // seconds
 
 	private float lastTriggerTime = -100f; // seconds
 	private bool tutorialOneVisible;
@@ -89,7 +92,9 @@ public class PanelRenderer : MonoBehaviour {
 						TutorialOneCompleted();
 					}
 
-					StartCoroutine (Fetch ());
+					if (Time.time > firstImageLoadTimeout) {
+						StartCoroutine (Fetch ());
+					}
 				}
 			}
 		}
@@ -117,9 +122,8 @@ public class PanelRenderer : MonoBehaviour {
 	}
 
 	private IEnumerator Fetch() {
+		firstImageLoadTimeout = Time.time + FIRST_IMAGE_LOAD_TIMEOUT_DURATION;
 		analytics.LogEvent ("Panorama", "Requested");
-
-		fetchAudio.Play ();
 
 		taskQueue = new List<object> ();
 		WWW www;
@@ -135,6 +139,8 @@ public class PanelRenderer : MonoBehaviour {
 			statusMessage.text = "Waiting for www.flickriver.com...";
 
 			bool censored;
+			Stopwatch s = new Stopwatch();
+			s.Start();
 
 			do {
 				www = new WWW (IMAGES_URL);
@@ -148,15 +154,24 @@ public class PanelRenderer : MonoBehaviour {
 
 				censored = IsCensored(flickrImage);
 			} while (censored);
+
+			s.Stop();
+			analytics.LogTiming("Loading", s.ElapsedMilliseconds, "Flickriver", "FetchPage");
 		} else {
 			analytics.LogEvent("Panorama", "FetchingRecommendation" + analytics.viewCount);
 		}
 
 		if (flickrImage != null) {
+			Stopwatch s = new Stopwatch();
+			s.Start();
+
 			www = new WWW (flickrImage.url);
 			statusMessage.text = "Waiting for www.flickr.com...";
 			print ("Fetching page: " + flickrImage.url);
 			yield return www;
+
+			s.Stop();
+			analytics.LogTiming("Loading", s.ElapsedMilliseconds, "Flickr", "FetchPage");
 
 			images = ExtractFromFlickr (www.text);
 			www = null;
@@ -277,54 +292,74 @@ public class PanelRenderer : MonoBehaviour {
 	private IEnumerator ProcessTasks() {
 		WWW www;
 		int i = 0; // single coroutine HACK
+		Stopwatch ctf = new Stopwatch ();
+		Stopwatch total = new Stopwatch();
+		ctf.Start ();
+		total.Start ();
 
 		while (taskQueue.Count > 0) {
 			object t = taskQueue[0];
 			taskQueue.RemoveAt(0);
 			if (t is ApplyImageTask) {
 				ApplyImageTask task = (ApplyImageTask)t;
+				Stopwatch s = new Stopwatch();
+				s.Start();
 
 				www = new WWW(task.url);
 				print ("Fetching image: " + task.url);
 				yield return www;
 
+				s.Stop();
+				analytics.LogTiming("Loading", s.ElapsedMilliseconds, "Flickr", "Image" + i + "Fetch");
+
 				task.material.mainTexture = www.texture;
 				www = null;
 
 				analytics.LogEvent("Panorama", "ImageRendered");
-				if (i == 2) {
+				if (i == 0) {
+					firstImageLoadTimeout = -1; // reset to allow user to load new image
+					fetchAudio.Play();
+				} else if (i == 2) {
 					analytics.LogEvent("Panorama", "LargeImageRendered");
+					ctf.Stop();
+					analytics.LogTiming("Loading", ctf.ElapsedMilliseconds, "Flickr", "LargeImageCTCF");
 				}
 			} else if (t is ShowTutorialTask) {
-				if (!analytics.tutorialOneFinished) {
-					statusMessage.text = TUTORIAL_ONE_TXT;
-					tutorialOneVisible = true;
-					tutorialOneRepeatVisible = false;
-					tutorialTwoVisible = false;
-				} else if (!analytics.tutorialOneRepeatFinished) {
-					statusMessage.text = TUTORIAL_ONE_REPEAT_TXT;
-					tutorialOneVisible = false;
-					tutorialOneRepeatVisible = true;
-					tutorialTwoVisible = false;
-
-					tutorialOneRepeatEndTime = Time.time + TUTORIAL_ONE_REPEAT_DURATION;
-
-					TutorialOneRepeatCompleted();
-				} else if (!analytics.tutorialTwoFinished && analytics.sessionCount >= 3) {
-					statusMessage.text = TUTORIAL_TWO_TXT;
-					tutorialOneVisible = false;
-					tutorialOneRepeatVisible = false;
-					tutorialTwoVisible = true;
-				}
+				ShowTutorial();
 			}
 
 			i++;
 		}
 
 		print ("Done");
+		total.Stop ();
 		analytics.LogEvent("Panorama", "AllImagesDone");
+		analytics.LogTiming ("Loading", total.ElapsedMilliseconds, "Flickr", "TotalTime");
 	}
 
+	private void ShowTutorial() {
+		if (!analytics.tutorialOneFinished) {
+			statusMessage.text = TUTORIAL_ONE_TXT;
+			tutorialOneVisible = true;
+			tutorialOneRepeatVisible = false;
+			tutorialTwoVisible = false;
+		} else if (!analytics.tutorialOneRepeatFinished) {
+			statusMessage.text = TUTORIAL_ONE_REPEAT_TXT;
+			tutorialOneVisible = false;
+			tutorialOneRepeatVisible = true;
+			tutorialTwoVisible = false;
+			
+			tutorialOneRepeatEndTime = Time.time + TUTORIAL_ONE_REPEAT_DURATION;
+			
+			TutorialOneRepeatCompleted();
+		} else if (!analytics.tutorialTwoFinished && analytics.sessionCount >= 3) {
+			statusMessage.text = TUTORIAL_TWO_TXT;
+			tutorialOneVisible = false;
+			tutorialOneRepeatVisible = false;
+			tutorialTwoVisible = true;
+		}
+	}
+	
 	private void ShowInfo (ImageInfo image) {
 		// clear previous info
 		foreach (Transform child in titleMessage.transform) {

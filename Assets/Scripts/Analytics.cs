@@ -54,21 +54,25 @@ public class Analytics : MonoBehaviour {
 	public void Init () {
 		sessionId = guid();
 
-		try {
-			PLAYER_FILE = Application.persistentDataPath + Path.DirectorySeparatorChar + "User";
-			TUTORIAL_ONE_FILE = Application.persistentDataPath + Path.DirectorySeparatorChar + "Tut1";
-			TUTORIAL_ONE_REPEAT_FILE = Application.persistentDataPath + Path.DirectorySeparatorChar + "Tut1Repeat";
-			TUTORIAL_TWO_FILE = Application.persistentDataPath + Path.DirectorySeparatorChar + "Tut2";
-			VIEW_COUNT_FILE = Application.persistentDataPath + Path.DirectorySeparatorChar + "VC";
+		PLAYER_FILE = Application.persistentDataPath + Path.DirectorySeparatorChar + "User";
+		TUTORIAL_ONE_FILE = Application.persistentDataPath + Path.DirectorySeparatorChar + "Tut1";
+		TUTORIAL_ONE_REPEAT_FILE = Application.persistentDataPath + Path.DirectorySeparatorChar + "Tut1Repeat";
+		TUTORIAL_TWO_FILE = Application.persistentDataPath + Path.DirectorySeparatorChar + "Tut2";
+		VIEW_COUNT_FILE = Application.persistentDataPath + Path.DirectorySeparatorChar + "VC";
 
+		try {
 			gav3 = GetComponent<GoogleAnalyticsV3> ();
 
 			if (Application.isEditor) {
 				gav3.androidTrackingCode = gav3.otherTrackingCode = preProdTrackingCode;
 			}
+		} catch (System.Exception e) {
+			LogException("Error setting up gav3", false);
+		}
 
-			// check and register repeat user
-			if (File.Exists(PLAYER_FILE)) {
+		// check and register repeat user
+		if (File.Exists(PLAYER_FILE)) {
+			try {
 				var sr = new StreamReader(PLAYER_FILE);
 				userId = sr.ReadLine();
 				if (userId != null && !userId.Trim().Equals("")) {
@@ -76,38 +80,51 @@ public class Analytics : MonoBehaviour {
 				}
 				sessionCount++;
 				sr.Close();
+			} catch (System.Exception e) {
+				LogException("Error reading player file", false);
+			}
 
+			try {
 				var sw = new StreamWriter(PLAYER_FILE);
 				sw.Write(userId + "\n" + sessionCount);
 				sw.Close();
-
-				LogEvent("Application", "ReturnUser");
-				LogEvent("Application", "SessionCount:" + sessionCount);
-			} else {
-				firstTimeUser = true;
+			} catch (System.Exception e) {
+				LogException("Error writing player file for new user", false);
 			}
+
+			LogEvent("Application", "ReturnUser");
+			LogEvent("Application", "SessionCount:" + sessionCount);
+		} else {
+			firstTimeUser = true;
+		}
 			
-			// else assign userId (even if file is corrupted)
-			if (userId == null || userId.Trim().Equals("")) {
-				userId = "U" + guid();
-				sessionCount = 1;
+		// else assign userId (even if file is corrupted)
+		if (userId == null || userId.Trim().Equals("")) {
+			userId = "U" + guid();
+			sessionCount = 1;
+
+			try {
 				var sw = new StreamWriter(PLAYER_FILE);
 				sw.Write(userId + "\n" + sessionCount);
 				sw.Close();
-				firstTimeUser = true;
+			} catch (System.Exception e) {
+				LogException("Error writing player file for new/null user", false);
 			}
+			firstTimeUser = true;
+		}
 
-			tutorialOneFinished = File.Exists (TUTORIAL_ONE_FILE);
-			tutorialOneRepeatFinished = File.Exists (TUTORIAL_ONE_REPEAT_FILE);
-			tutorialTwoFinished = File.Exists (TUTORIAL_TWO_FILE);
+		tutorialOneFinished = File.Exists (TUTORIAL_ONE_FILE);
+		tutorialOneRepeatFinished = File.Exists (TUTORIAL_ONE_REPEAT_FILE);
+		tutorialTwoFinished = File.Exists (TUTORIAL_TWO_FILE);
 
-			if (File.Exists (VIEW_COUNT_FILE)) {
+		if (File.Exists (VIEW_COUNT_FILE)) {
+			try {
 				var sr = new StreamReader(VIEW_COUNT_FILE);
 				viewCount = int.Parse(sr.ReadLine());
 				sr.Close();
+			} catch (System.Exception e) {
+				LogException("Error reading view count file", false);
 			}
-		} catch (System.Exception e) {
-			LogException(e.Message, true);
 		}
 			
 		// register session with timestamp
@@ -152,6 +169,13 @@ public class Analytics : MonoBehaviour {
 		if (gav3) {
 			gav3.LogEvent( new EventHitBuilder().SetEventCategory(category).SetEventAction(action) );
 			gav3.LogEvent( new EventHitBuilder().SetEventCategory(category + ":" + sessionId).SetEventAction(action) );
+		}
+	}
+
+	public void LogTiming(string category, long interval, string name, string label) {
+		if (gav3) {
+			gav3.LogTiming(category, interval, name, label);
+			gav3.LogTiming(category + ":" + sessionId, interval, name, label);
 		}
 	}
 	
