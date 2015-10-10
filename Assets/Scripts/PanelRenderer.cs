@@ -33,8 +33,11 @@ public class PanelRenderer : MonoBehaviour {
 
 	private const string TUTORIAL_ONE_TXT = "<b>Let's try something!</b>\nPush down and leave " +
 		"trigger TWICE\nto load new images anytime.\n<i>(or</i> press Fire1 TWICE)";
+	private const string TUTORIAL_ONE_REPEAT_TXT = "<b>Double-trigger again</b>\nevery time you want\na new image";
 	private const string TUTORIAL_TWO_TXT = "<b>Pro tip, give it a try!</b>\nPush down and leave " +
 		"trigger ONCE and <b>WAIT</b>\nto see behind you.\n<i>(or</i> press Fire1 ONCE and <b>WAIT</b>)";
+
+	private const float TUTORIAL_ONE_REPEAT_DURATION = 4.5f; // seconds
 
 	private const string IMAGES_URL = "http://www.flickriver.com/groups/equirectangular/pool/random/";
 
@@ -45,10 +48,14 @@ public class PanelRenderer : MonoBehaviour {
 	private Shader PANORAMA_SHADER;
 	private float rotation = 0f;
 	private Quaternion targetRotation;
+	private AudioSource fetchAudio;
 
 	private float lastTriggerTime = -100f; // seconds
 	private bool tutorialOneVisible;
+	private bool tutorialOneRepeatVisible;
 	private bool tutorialTwoVisible;
+
+	private float tutorialOneRepeatEndTime = -1; // seconds
 
 	private GameObject el;
 	private List<object> taskQueue;
@@ -61,6 +68,7 @@ public class PanelRenderer : MonoBehaviour {
 		PANORAMA_SHADER = Shader.Find ("InsideVisible");
 		statusMessage = GameObject.Find ("StatusMessage").GetComponent<TextMesh>();
 		titleMessage = GameObject.Find ("TitleMessage");
+		fetchAudio = GetComponent<AudioSource> ();
 		analytics = GameObject.Find ("Analytics").GetComponent<Analytics>();
 		analytics.Init ();
 
@@ -97,6 +105,11 @@ public class PanelRenderer : MonoBehaviour {
 				TutorialTwoCompleted();
 			}
 		}
+
+		if (tutorialOneRepeatVisible && Time.time > tutorialOneRepeatEndTime) {
+			tutorialOneRepeatVisible = false;
+			statusMessage.text = "";
+		}
 	}
 
 	void FixedUpdate() {
@@ -105,6 +118,9 @@ public class PanelRenderer : MonoBehaviour {
 
 	private IEnumerator Fetch() {
 		analytics.LogEvent ("Panorama", "Requested");
+
+		fetchAudio.Play ();
+
 		taskQueue = new List<object> ();
 		WWW www;
 		ImageInfo flickrImage;
@@ -266,10 +282,21 @@ public class PanelRenderer : MonoBehaviour {
 				if (!analytics.tutorialOneFinished) {
 					statusMessage.text = TUTORIAL_ONE_TXT;
 					tutorialOneVisible = true;
+					tutorialOneRepeatVisible = false;
 					tutorialTwoVisible = false;
+				} else if (!analytics.tutorialOneRepeatFinished) {
+					statusMessage.text = TUTORIAL_ONE_REPEAT_TXT;
+					tutorialOneVisible = false;
+					tutorialOneRepeatVisible = true;
+					tutorialTwoVisible = false;
+
+					tutorialOneRepeatEndTime = Time.time + TUTORIAL_ONE_REPEAT_DURATION;
+
+					TutorialOneRepeatCompleted();
 				} else if (!analytics.tutorialTwoFinished && analytics.sessionCount >= 3) {
 					statusMessage.text = TUTORIAL_TWO_TXT;
 					tutorialOneVisible = false;
+					tutorialOneRepeatVisible = false;
 					tutorialTwoVisible = true;
 				}
 			}
@@ -329,11 +356,16 @@ public class PanelRenderer : MonoBehaviour {
 		analytics.LogTutorialOneDone();
 		tutorialOneVisible = false;
 	}
+
+	private void TutorialOneRepeatCompleted() {
+		analytics.LogTutorialOneRepeatDone();
+	}
 	
 	private void TutorialTwoCompleted() {
 		analytics.LogTutorialTwoDone ();
 		statusMessage.text = "";
 		tutorialOneVisible = false;
+		tutorialOneRepeatVisible = false;
 		tutorialTwoVisible = false;
 	}
 }

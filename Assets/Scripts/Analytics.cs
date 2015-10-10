@@ -17,6 +17,7 @@ public class Analytics : MonoBehaviour {
 	public int sessionCount = 0;
 	public bool firstTimeUser;
 	public bool tutorialOneFinished;
+	public bool tutorialOneRepeatFinished;
 	public bool tutorialTwoFinished;
 	public int viewCount = 0;
 
@@ -25,6 +26,7 @@ public class Analytics : MonoBehaviour {
 	private const float HEALTH_CHECK_INTERVAL = 5; // seconds
 	private string PLAYER_FILE;
 	private string TUTORIAL_ONE_FILE;
+	private string TUTORIAL_ONE_REPEAT_FILE;
 	private string TUTORIAL_TWO_FILE;
 	private string VIEW_COUNT_FILE;
 	
@@ -44,6 +46,7 @@ public class Analytics : MonoBehaviour {
 		try {
 			PLAYER_FILE = Application.persistentDataPath + Path.DirectorySeparatorChar + "User";
 			TUTORIAL_ONE_FILE = Application.persistentDataPath + Path.DirectorySeparatorChar + "Tut1";
+			TUTORIAL_ONE_REPEAT_FILE = Application.persistentDataPath + Path.DirectorySeparatorChar + "Tut1Repeat";
 			TUTORIAL_TWO_FILE = Application.persistentDataPath + Path.DirectorySeparatorChar + "Tut2";
 			VIEW_COUNT_FILE = Application.persistentDataPath + Path.DirectorySeparatorChar + "VC";
 
@@ -80,6 +83,7 @@ public class Analytics : MonoBehaviour {
 			}
 
 			tutorialOneFinished = File.Exists (TUTORIAL_ONE_FILE);
+			tutorialOneRepeatFinished = File.Exists (TUTORIAL_ONE_REPEAT_FILE);
 			tutorialTwoFinished = File.Exists (TUTORIAL_TWO_FILE);
 
 			if (File.Exists (VIEW_COUNT_FILE)) {
@@ -150,6 +154,14 @@ public class Analytics : MonoBehaviour {
 		sw.Close();
 		tutorialOneFinished = true;
 		LogEvent ("Tutorial", "OneDone");
+	}
+
+	public void LogTutorialOneRepeatDone() {
+		var sw = new StreamWriter(TUTORIAL_ONE_REPEAT_FILE);
+		sw.Write(" ");
+		sw.Close();
+		tutorialOneRepeatFinished = true;
+		LogEvent ("Tutorial", "OneRepeatDone");
 	}
 	
 	public void LogTutorialTwoDone() {
