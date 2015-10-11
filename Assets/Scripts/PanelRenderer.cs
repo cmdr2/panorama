@@ -32,6 +32,7 @@ public class PanelRenderer : MonoBehaviour {
 	private const float DOUBLE_TRIGGER_INTERVAL = 1.5f; // seconds
 	private const float HEALTH_CHECK_INTERVAL = 5; // seconds
 	private const float FIRST_IMAGE_LOAD_TIMEOUT_DURATION = 6; // seconds
+	private const float IMAGE_VIEWING_TIMEOUT_DURATION = 3; // seconds
 
 	private const string TUTORIAL_ONE_TXT = "<b>Let's try something!</b>\nPush down and leave " +
 		"trigger TWICE\nto load new images anytime.\n<i>(or</i> press Fire1 TWICE)";
@@ -59,6 +60,7 @@ public class PanelRenderer : MonoBehaviour {
 	private bool tutorialTwoVisible;
 
 	private float tutorialOneRepeatEndTime = -1; // seconds
+	private Stopwatch ctf;
 
 	private GameObject el;
 	private List<object> taskQueue;
@@ -92,9 +94,8 @@ public class PanelRenderer : MonoBehaviour {
 						TutorialOneCompleted();
 					}
 
-					if (Time.time > firstImageLoadTimeout) {
-						StartCoroutine (Fetch ());
-					}
+
+					StartCoroutine (Fetch ());
 				}
 			}
 		}
@@ -122,6 +123,11 @@ public class PanelRenderer : MonoBehaviour {
 	}
 
 	private IEnumerator Fetch() {
+		if (Time.time < firstImageLoadTimeout) {
+			analytics.LogEvent("Panorama", "ThrottlingFetch");
+			yield break;
+		}
+
 		firstImageLoadTimeout = Time.time + FIRST_IMAGE_LOAD_TIMEOUT_DURATION;
 		analytics.LogEvent ("Panorama", "Requested");
 
@@ -130,8 +136,9 @@ public class PanelRenderer : MonoBehaviour {
 		ImageInfo flickrImage;
 
 		// first try recommendation
-		print ("Fetch " + analytics.viewCount);
 		flickrImage = GetRecommendedImage (analytics.viewCount);
+
+		analytics.LogEvent ("Panorama", "DebugGotRecommendation");
 
 		// else get random
 		if (flickrImage == null) {
@@ -163,6 +170,7 @@ public class PanelRenderer : MonoBehaviour {
 
 		if (flickrImage != null) {
 			Stopwatch s = new Stopwatch();
+			analytics.LogEvent("Panorama", "DebugFetchFlickr");
 			s.Start();
 
 			www = new WWW (flickrImage.url);
@@ -171,6 +179,7 @@ public class PanelRenderer : MonoBehaviour {
 			yield return www;
 
 			s.Stop();
+			analytics.LogEvent("Panorama", "DebugGotFlickr");
 			analytics.LogTiming("Loading", s.ElapsedMilliseconds, "Flickr", "FetchPage");
 
 			images = ExtractFromFlickr (www.text);
@@ -264,66 +273,55 @@ public class PanelRenderer : MonoBehaviour {
 	
 	// currently only draws one
 	private void DrawPanorama(List<PanoramaImage> p){
-		taskQueue = new List<object> ();
+		try {
+			taskQueue = new List<object> ();
 
-		if (el == null) {
-			el = Instantiate (panoramaImg);
-		}
-		PanoramaImage image = p[0];
-
-		Material m = new Material(PANORAMA_SHADER);
-		el.GetComponent<Renderer> ().sharedMaterial = m;
-
-		foreach (string url in image.url) {
-			if (url.Length > 0) {
-				taskQueue.Add (new ApplyImageTask (url, m));
+			if (el == null) {
+				el = Instantiate (panoramaImg);
 			}
+			PanoramaImage image = p[0];
+
+			Material m = new Material(PANORAMA_SHADER);
+			el.GetComponent<Renderer> ().sharedMaterial = m;
+
+			foreach (string url in image.url) {
+				if (url.Length > 0) {
+					taskQueue.Add (new ApplyImageTask (url, m));
+				}
+			}
+			taskQueue.Add (new ShowTutorialTask ());
+
+			el.transform.parent = transform;
+
+			StartCoroutine( ProcessTasks () );
+		} catch (System.Exception e) {
+			analytics.LogException("Error drawing panorama: " + e.Message + "; " + e.StackTrace, true);
 		}
-		taskQueue.Add (new ShowTutorialTask ());
-
-		el.transform.parent = transform;
-
-		StartCoroutine( ProcessTasks () );
 	}
 
 	/**
 	 * Renders the image progressively, using the small, medium and large URLs in succession
 	 */
 	private IEnumerator ProcessTasks() {
-		WWW www;
 		int i = 0; // single coroutine HACK
-		Stopwatch ctf = new Stopwatch ();
+		ctf = new Stopwatch ();
 		Stopwatch total = new Stopwatch();
 		ctf.Start ();
 		total.Start ();
 
 		while (taskQueue.Count > 0) {
-			object t = taskQueue[0];
-			taskQueue.RemoveAt(0);
+			object t = null;
+			try {
+				t = taskQueue[0];
+				taskQueue.RemoveAt(0);
+			} catch (System.Exception e) {
+				analytics.LogException("Error pulling task: " + e.Message + "; " + e.StackTrace, true);
+				continue;
+			}
+
 			if (t is ApplyImageTask) {
 				ApplyImageTask task = (ApplyImageTask)t;
-				Stopwatch s = new Stopwatch();
-				s.Start();
-
-				www = new WWW(task.url);
-				print ("Fetching image: " + task.url);
-				yield return www;
-
-				s.Stop();
-				analytics.LogTiming("Loading", s.ElapsedMilliseconds, "Flickr", "Image" + i + "Fetch");
-
-				task.material.mainTexture = www.texture;
-				www = null;
-
-				analytics.LogEvent("Panorama", "ImageRendered");
-				if (i == 0) {
-					firstImageLoadTimeout = -1; // reset to allow user to load new image
-					fetchAudio.Play();
-				} else if (i == 2) {
-					analytics.LogEvent("Panorama", "LargeImageRendered");
-					ctf.Stop();
-					analytics.LogTiming("Loading", ctf.ElapsedMilliseconds, "Flickr", "LargeImageCTCF");
-				}
+				yield return StartCoroutine(ShowImage(task, i));
 			} else if (t is ShowTutorialTask) {
 				ShowTutorial();
 			}
@@ -337,6 +335,46 @@ public class PanelRenderer : MonoBehaviour {
 		analytics.LogTiming ("Loading", total.ElapsedMilliseconds, "Flickr", "TotalTime");
 	}
 
+	private IEnumerator ShowImage(ApplyImageTask task, int taskIndex) {
+		Stopwatch s = new Stopwatch();
+		analytics.LogEvent("Panorama", "DebugFetchFlickrImage");
+		s.Start();
+		
+		WWW www;
+		try {
+			www = new WWW(task.url);
+		} catch (System.Exception e) {
+			analytics.LogException("Error fetching image url: " + e.Message + "; " + e.StackTrace, true);
+			www = null;
+			yield break;
+		}
+		print ("Fetching image: " + task.url);
+		yield return www;
+		
+		s.Stop();
+		analytics.LogEvent ("Panorama", "DebugGotFlickrImage");
+		analytics.LogTiming("Loading", s.ElapsedMilliseconds, "Flickr", "Image" + taskIndex + "Fetch");
+
+		try {
+			task.material.mainTexture = www.texture;
+		} catch (System.Exception e) {
+			analytics.LogException("Error applying new texture: " + e.Message + "; " + e.StackTrace, true);
+			www = null;
+			yield break;
+		}
+		www = null;
+		
+		analytics.LogEvent("Panorama", "ImageRendered");
+		if (taskIndex == 0) {
+			firstImageLoadTimeout = Time.time + IMAGE_VIEWING_TIMEOUT_DURATION;
+			fetchAudio.Play();
+		} else if (taskIndex == 2) {
+			analytics.LogEvent("Panorama", "LargeImageRendered");
+			ctf.Stop();
+			analytics.LogTiming("Loading", ctf.ElapsedMilliseconds, "Flickr", "LargeImageCTCF");
+		}
+	}
+	
 	private void ShowTutorial() {
 		if (!analytics.tutorialOneFinished) {
 			statusMessage.text = TUTORIAL_ONE_TXT;
@@ -361,47 +399,55 @@ public class PanelRenderer : MonoBehaviour {
 	}
 	
 	private void ShowInfo (ImageInfo image) {
-		// clear previous info
-		foreach (Transform child in titleMessage.transform) {
-			Destroy(child.gameObject);
+		try {
+			// clear previous info
+			foreach (Transform child in titleMessage.transform) {
+				Destroy(child.gameObject);
+			}
+		} catch (System.Exception e) {
+			analytics.LogException("Error destrying old info children: " + e.Message + "; " + e.StackTrace, false);
 		}
 
-		titleMessage.transform.parent = statusMessage.gameObject.transform.parent;
+		try {
+			titleMessage.transform.parent = statusMessage.gameObject.transform.parent;
 
-		// show new info
-		GameObject titleObj = new GameObject();
-		float distance = statusMessage.gameObject.transform.position.magnitude;
-		titleObj.transform.parent = titleMessage.transform;
-		titleObj.transform.localScale = Vector3.one;
-		TextMesh titleText = titleObj.AddComponent<TextMesh>();
-		string shortUrl = "flic.kr/p/" + Base58.Encode (image.imageId);
-		titleText.text = image.title + " (" + shortUrl + ")\n" + "by: " + image.author;
-		titleText.color = Color.white;
-		titleText.characterSize = 1.2f;
-		titleText.alignment = TextAlignment.Right;
-		titleText.anchor = TextAnchor.MiddleCenter;
-		TitleAnimation anim = titleObj.AddComponent<TitleAnimation> ();
+			// show new info
+			GameObject titleObj = new GameObject();
+			float distance = statusMessage.gameObject.transform.position.magnitude;
+			titleObj.transform.parent = titleMessage.transform;
+			titleObj.transform.localScale = Vector3.one;
+			TextMesh titleText = titleObj.AddComponent<TextMesh>();
+			string shortUrl = "flic.kr/p/" + Base58.Encode (image.imageId);
+			titleText.text = image.title + " (" + shortUrl + ")\n" + "by: " + image.author;
+			titleText.color = Color.white;
+			titleText.characterSize = 1.2f;
+			titleText.alignment = TextAlignment.Right;
+			titleText.anchor = TextAnchor.MiddleCenter;
+			TitleAnimation anim = titleObj.AddComponent<TitleAnimation> ();
 
-		// set background color for info
-		GameObject bgQuad = GameObject.CreatePrimitive (PrimitiveType.Quad);
-		bgQuad.transform.parent = titleObj.transform;
-		bgQuad.transform.localPosition = new Vector3 (0, 0, 0.2f);
-		bgQuad.transform.localRotation = Quaternion.identity;
-		Renderer titleTextRenderer = titleObj.GetComponent<Renderer> ();
-		Bounds titleTextBounds = titleTextRenderer.bounds;
-		bgQuad.transform.localScale = titleTextBounds.extents * 18f;
-		MeshRenderer quadRenderer = bgQuad.GetComponent<MeshRenderer> ();
-		quadRenderer.sharedMaterial = new Material (Shader.Find ("Standard"));
-		quadRenderer.sharedMaterial.color = Color.black;
+			// set background color for info
+			GameObject bgQuad = GameObject.CreatePrimitive (PrimitiveType.Quad);
+			bgQuad.transform.parent = titleObj.transform;
+			bgQuad.transform.localPosition = new Vector3 (0, 0, 0.2f);
+			bgQuad.transform.localRotation = Quaternion.identity;
+			Renderer titleTextRenderer = titleObj.GetComponent<Renderer> ();
+			Bounds titleTextBounds = titleTextRenderer.bounds;
+			bgQuad.transform.localScale = titleTextBounds.extents * 18f;
+			MeshRenderer quadRenderer = bgQuad.GetComponent<MeshRenderer> ();
+			quadRenderer.sharedMaterial = new Material (Shader.Find ("Standard"));
+			quadRenderer.sharedMaterial.color = Color.black;
 
-		// reposition
-		titleMessage.transform.localPosition = statusMessage.transform.localPosition;
-		titleMessage.transform.localRotation = Quaternion.identity;
-		titleObj.transform.localPosition = Vector3.zero;
-		titleObj.transform.localRotation = Quaternion.identity;
+			// reposition
+			titleMessage.transform.localPosition = statusMessage.transform.localPosition;
+			titleMessage.transform.localRotation = Quaternion.identity;
+			titleObj.transform.localPosition = Vector3.zero;
+			titleObj.transform.localRotation = Quaternion.identity;
 
-		// detach from parent
-		titleMessage.transform.parent = null;
+			// detach from parent
+			titleMessage.transform.parent = null;
+		} catch (System.Exception e) {
+			analytics.LogException("Error showing new info: " + e.Message + "; " + e.StackTrace, false);
+		}
 	}
 	
 	private void TutorialOneCompleted() {
