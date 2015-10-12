@@ -20,8 +20,20 @@ public class PanelRenderer : MonoBehaviour {
 	public GameObject img;
 	public GameObject panoramaImg;
 
+	public Material monoPanoramaMat;
+	public Material leftSBSPanoramaMat;
+	public Material rightSBSPanoramaMat;
+	public Material leftOUPanoramaMat;
+	public Material rightOUPanoramaMat;
+	public Material leftOUInvPanoramaMat;
+	public Material rightOUInvPanoramaMat;
+
 	private TextMesh statusMessage;
 	private GameObject titleMessage;
+
+	private GameObject monoEyePano;
+	private GameObject leftEyePano;
+	private GameObject rightEyePano;
 
 
 	/* globals */
@@ -46,7 +58,7 @@ public class PanelRenderer : MonoBehaviour {
 
 
 	/* scratchpad */
-	private List<PanoramaImage> images = new List<PanoramaImage>();
+	private bool isStereoMode = false;
 
 	private Shader PANORAMA_SHADER;
 	private float rotation = 0f;
@@ -62,7 +74,6 @@ public class PanelRenderer : MonoBehaviour {
 	private float tutorialOneRepeatEndTime = -1; // seconds
 	private Stopwatch ctf;
 
-	private GameObject el;
 	private List<object> taskQueue;
 
 	private Analytics analytics;
@@ -72,6 +83,10 @@ public class PanelRenderer : MonoBehaviour {
 	void Start () {
 		PANORAMA_SHADER = Shader.Find ("InsideVisible");
 		statusMessage = GameObject.Find ("StatusMessage").GetComponent<TextMesh>();
+		monoEyePano = GameObject.Find ("monoEyePano");
+		leftEyePano = GameObject.Find ("leftEyePano");
+		rightEyePano = GameObject.Find ("rightEyePano");
+
 		titleMessage = GameObject.Find ("TitleMessage");
 		fetchAudio = GetComponent<AudioSource> ();
 		analytics = GameObject.Find ("Analytics").GetComponent<Analytics>();
@@ -116,6 +131,12 @@ public class PanelRenderer : MonoBehaviour {
 			tutorialOneRepeatVisible = false;
 			statusMessage.text = "";
 		}
+
+		if (!isStereoMode && Cardboard.SDK.Tilted) {
+			isStereoMode = true;
+			StartCoroutine (Fetch ());
+			Handheld.Vibrate ();
+		}
 	}
 
 	void FixedUpdate() {
@@ -127,21 +148,48 @@ public class PanelRenderer : MonoBehaviour {
 			analytics.LogEvent("Panorama", "ThrottlingFetch");
 			yield break;
 		}
-
+		
 		firstImageLoadTimeout = Time.time + FIRST_IMAGE_LOAD_TIMEOUT_DURATION;
+
 		analytics.gav3.LogEvent ("Panorama:" + analytics.sessionId, "Requested", "foo", 1);
-		analytics.gav3.LogEvent ("Panorama:" + analytics.sessionId, "Requested2", "foo", 1);
-//		analytics.LogEvent ("Panorama", "Requested2");
 
 		taskQueue = new List<object> ();
-//		analytics.LogEvent ("Panorama", "DebugNewTaskQueue");
+
+		yield return ( isStereoMode ? StartCoroutine (FetchStereo ()) : StartCoroutine (FetchMono ()) );
+	}
+
+	private IEnumerator FetchStereo() {
+		analytics.gav3.LogEvent ("Panorama:" + analytics.sessionId, "RequestedStereo", "foo", 1);
+
+		PanoramaImage image = null;
+		if (analytics.stereoViewCount >= 0 && analytics.stereoViewCount < Recommendations.stereoImages.Count) {
+			image = Recommendations.stereoImages[analytics.stereoViewCount];
+		}
+
+		if (image != null) {
+			string domain = new System.Uri(image.url[0]).Host;
+			statusMessage.text = "Waiting for " + domain + "...";
+			DrawPanorama (image);
+
+			analytics.LogStereoViewCount ();
+		} else {
+			statusMessage.text = "Error getting stereoscopic panorama from index";
+		}
+
+		yield break;
+	}
+
+	private IEnumerator FetchMono() {
+		analytics.gav3.LogEvent ("Panorama:" + analytics.sessionId, "RequestedMono", "foo", 1);
+//		analytics.LogEvent ("Panorama", "Requested");
+
 		WWW www;
 //		analytics.LogEvent ("Panorama", "DebugNewWWW");
 		ImageInfo flickrImage;
 //		analytics.LogEvent ("Panorama", "DebugNewImageInfo");
 
 		// first try recommendation
-		flickrImage = GetRecommendedImage (analytics.viewCount);
+		flickrImage = GetRecommendedImage (analytics.monoViewCount);
 
 //		analytics.LogEvent ("Panorama", "DebugGotRecommendation");
 		analytics.gav3.LogEvent ("Panorama" + analytics.sessionId, "DebugGotRecommendation", "foo", 1);
@@ -171,7 +219,7 @@ public class PanelRenderer : MonoBehaviour {
 			s.Stop();
 			analytics.LogTiming("Loading", s.ElapsedMilliseconds, "Flickriver", "FetchPage");
 		} else {
-			analytics.LogEvent("Panorama", "FetchingRecommendation" + analytics.viewCount);
+			analytics.LogEvent("Panorama", "FetchingRecommendation" + analytics.monoViewCount);
 		}
 
 		if (flickrImage != null) {
@@ -188,18 +236,18 @@ public class PanelRenderer : MonoBehaviour {
 			analytics.LogEvent("Panorama", "DebugGotFlickr");
 			analytics.LogTiming("Loading", s.ElapsedMilliseconds, "Flickr", "FetchPage");
 
-			images = ExtractFromFlickr (www.text);
+			PanoramaImage image = ExtractFromFlickr (www.text);
 			www = null;
 
 			statusMessage.text = "";
 
 
 			/* draw! */
-			DrawPanorama (images);
+			DrawPanorama (image);
 			ShowInfo (flickrImage);
 
 			/* log */
-			analytics.LogViewCount();
+			analytics.LogMonoViewCount();
 			analytics.LogEvent ("Panorama", "ImagesLoading");
 		} else {
 			statusMessage.text = "Failed to find a panorama to show!";
@@ -236,14 +284,12 @@ public class PanelRenderer : MonoBehaviour {
 		return Recommendations.censored.Contains (image.imageId);
 	}
 
-	private List<PanoramaImage> ExtractFromFlickr(string body) {
+	private PanoramaImage ExtractFromFlickr(string body) {
 		if (body == null) {
-			return new List<PanoramaImage>();
+			return new PanoramaImage();
 		}
 
-		List<PanoramaImage> entries = new List<PanoramaImage>();
 		PanoramaImage image = new PanoramaImage ();
-		entries.Add (image);
 
 		string[] urls = Regex.Split (body, @"""displayUrl""");
 
@@ -264,7 +310,7 @@ public class PanelRenderer : MonoBehaviour {
 		image.url.Add (largeUrl);
 		image.url.Add (xlargeUrl);
 
-		return entries;
+		return image;
 	}
 
 	private long ExtractIdFromFlickrUrl(string flickrUrl) {
@@ -276,28 +322,63 @@ public class PanelRenderer : MonoBehaviour {
 		var match = Regex.Match(body, regex);
 		return (match.Success ? match.Groups[1].Value.Replace("\\/", "/").Replace("//", "http://") : "");
 	}
-	
-	// currently only draws one
-	private void DrawPanorama(List<PanoramaImage> p){
+
+	private void DrawPanorama(PanoramaImage image){
 		try {
 			taskQueue = new List<object> ();
 
-			if (el == null) {
-				el = Instantiate (panoramaImg);
-			}
-			PanoramaImage image = p[0];
+			List<Material> mats = null;
+			Material m1 = null, m2 = null;
 
-			Material m = new Material(PANORAMA_SHADER);
-			el.GetComponent<Renderer> ().sharedMaterial = m;
+			switch (image.stereoType) {
+			case StereoType.NONE:
+				m1 = new Material(monoPanoramaMat);
+				monoEyePano.SetActive(true);
+				leftEyePano.SetActive(false);
+				rightEyePano.SetActive(false);
+				break;
+			case StereoType.SBS:
+				m1 = new Material(leftSBSPanoramaMat);
+				m2 = new Material(rightSBSPanoramaMat);
+				monoEyePano.SetActive(false);
+				leftEyePano.SetActive(true);
+				rightEyePano.SetActive(true);
+				break;
+			case StereoType.OVER_UNDER:
+				m1 = new Material(leftOUPanoramaMat);
+				m2 = new Material(rightOUPanoramaMat);
+				monoEyePano.SetActive(false);
+				leftEyePano.SetActive(true);
+				rightEyePano.SetActive(true);
+				break;
+			case StereoType.OVER_UNDER_INV:
+				m1 = new Material(leftOUInvPanoramaMat);
+				m2 = new Material(rightOUInvPanoramaMat);
+				monoEyePano.SetActive(false);
+				leftEyePano.SetActive(true);
+				rightEyePano.SetActive(true);
+				break;
+			}
+
+			if (monoEyePano.activeSelf) {
+				monoEyePano.GetComponent<Renderer>().sharedMaterial = m1;
+				mats = new List<Material>() {m1};
+			}
+			if (leftEyePano.activeSelf) {
+				leftEyePano.GetComponent<Renderer>().sharedMaterial = m1;
+				mats = new List<Material>() {m1, m2};
+			}
+			if (rightEyePano.activeSelf) {
+				rightEyePano.GetComponent<Renderer>().sharedMaterial = m2;
+				mats = new List<Material>() {m1, m2};
+			}
 
 			foreach (string url in image.url) {
 				if (url.Length > 0) {
-					taskQueue.Add (new ApplyImageTask (url, m));
+					taskQueue.Add (new ApplyImageTask (url, mats));
 				}
 			}
 			taskQueue.Add (new ShowTutorialTask ());
-
-			el.transform.parent = transform;
 
 			StartCoroutine( ProcessTasks () );
 		} catch (System.Exception e) {
@@ -362,7 +443,9 @@ public class PanelRenderer : MonoBehaviour {
 		analytics.LogTiming("Loading", s.ElapsedMilliseconds, "Flickr", "Image" + taskIndex + "Fetch");
 
 		try {
-			task.material.mainTexture = www.texture;
+			foreach (Material m in task.mats) {
+				m.mainTexture = www.texture;
+			}
 		} catch (System.Exception e) {
 			analytics.LogException("Error applying new texture: " + e.Message + "; " + e.StackTrace, true);
 			www = null;
@@ -371,6 +454,7 @@ public class PanelRenderer : MonoBehaviour {
 		www = null;
 		
 		analytics.LogEvent("Panorama", "ImageRendered");
+		if (isStereoMode) statusMessage.text = "";
 		if (taskIndex == 0) {
 			firstImageLoadTimeout = Time.time + IMAGE_VIEWING_TIMEOUT_DURATION;
 			fetchAudio.Play();
@@ -474,8 +558,24 @@ public class PanelRenderer : MonoBehaviour {
 	}
 }
 
-class PanoramaImage {
+public enum StereoType { // stereotypical enum
+	SBS, OVER_UNDER, OVER_UNDER_INV, NONE
+};
+
+public class PanoramaImage {
 	public List<string> url = new List<string>();
+	public StereoType stereoType = StereoType.NONE;
+
+	public PanoramaImage() {}
+
+	public PanoramaImage(List<string> url) {
+		this.url = url;
+	}
+
+	public PanoramaImage(List<string> url, StereoType stereoType) {
+		this.url = url;
+		this.stereoType = stereoType;
+	}
 }
 
 public class ImageInfo {
@@ -504,10 +604,10 @@ class ShowTutorialTask {}
 
 class ApplyImageTask {
 	public string url;
-	public Material material;
+	public List<Material> mats;
 
-	public ApplyImageTask(string url, Material m) {
+	public ApplyImageTask(string url, List<Material> mats) {
 		this.url = url;
-		this.material = m;
+		this.mats = mats;
 	}
 }

@@ -30,7 +30,9 @@ public class Analytics : MonoBehaviour {
 	[HideInInspector]
 	public bool tutorialTwoFinished;
 	[HideInInspector]
-	public int viewCount = 0;
+	public int monoViewCount = 0;
+	[HideInInspector]
+	public int stereoViewCount = 0;
 
 
 	/* globals */
@@ -120,7 +122,9 @@ public class Analytics : MonoBehaviour {
 		if (File.Exists (VIEW_COUNT_FILE)) {
 			try {
 				var sr = new StreamReader(VIEW_COUNT_FILE);
-				viewCount = int.Parse(sr.ReadLine());
+				monoViewCount = int.Parse(sr.ReadLine());
+				string svc = sr.ReadLine();
+				stereoViewCount = (svc != null && !svc.Trim().Equals("") ? int.Parse(svc) : 0);
 				sr.Close();
 			} catch (System.Exception e) {
 				LogException("Error reading view count file", false);
@@ -210,9 +214,17 @@ public class Analytics : MonoBehaviour {
 		LogEvent ("Tutorial", "TwoDone");
 	}
 
-	public void LogViewCount() {
+	public void LogMonoViewCount() {
 		var sw = new StreamWriter(VIEW_COUNT_FILE);
-		sw.Write(++viewCount);
+		sw.Write((++monoViewCount) + "\n" + stereoViewCount);
+		sw.Close();
+	}
+
+	public void LogStereoViewCount() {
+		stereoViewCount = (stereoViewCount + 1) % Recommendations.stereoImages.Count;
+
+		var sw = new StreamWriter(VIEW_COUNT_FILE);
+		sw.Write(monoViewCount + "\n" + stereoViewCount);
 		sw.Close();
 	}
 }

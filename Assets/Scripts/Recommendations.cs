@@ -30,4 +30,60 @@ public class Recommendations {
 		2704842426L,
 		4566289016L
 	};
+
+	public static List<PanoramaImage> stereoImages = new List<PanoramaImage>() {
+		new PanoramaImage(new List<string>() {
+			"http://i.imgur.com/Yofg2Lv.jpg",
+			"http://i.imgur.com/Gl3qMf3.jpg",
+			"http://i.imgur.com/eHTiy57.jpg",
+			"http://code.blender.org/wp-content/uploads/2015/03/gooseberry_benchmark_panorama.jpg"
+		}, StereoType.OVER_UNDER_INV),
+
+		new PanoramaImage(new List<string>() {
+			"http://i.imgur.com/AnlxuJs.jpg",
+			"http://i.imgur.com/etJOj9h.jpg",
+			"http://i.imgur.com/DmMXc2B.jpg",
+			"http://www.mediavr.com/chinesegarden1.jpg"
+		}, StereoType.SBS),
+
+		new PanoramaImage(new List<string>() {
+			"http://i.imgur.com/XJeYxCw.jpg",
+			"http://i.imgur.com/W0D1iYM.jpg",
+			"http://i.imgur.com/rVq1gUI.jpg"
+		}, StereoType.OVER_UNDER),
+		
+		new PanoramaImage(new List<string>() {
+			"http://i.imgur.com/tPDUJiD.jpg",
+			"http://i.imgur.com/K4XOLAr.jpg",
+			"http://realvision.ae/blog/wp-content/uploads/2015/01/Maya_balcony_test_retinal_rivalry_reduced.jpg"
+		}, StereoType.OVER_UNDER),
+		
+		new PanoramaImage(new List<string>() {
+			"http://i.imgur.com/s1Nngjr.jpg",
+			"http://i.imgur.com/LIBtNCx.jpg",
+			"http://i.ytimg.com/vi/LKsUxHASFBs/maxresdefault.jpg"
+		}, StereoType.OVER_UNDER),
+		
+		new PanoramaImage(new List<string>() {
+			"http://i.imgur.com/B6r8MBG.jpg",
+			"http://i.imgur.com/QB29MZv.jpg",
+			"http://i.imgur.com/bz8njwi.jpg",
+			"http://i.imgur.com/Ip4Yc7D.jpg",
+			"http://i.imgur.com/bePKsgW.jpg"
+		}, StereoType.OVER_UNDER),
+		
+		new PanoramaImage(new List<string>() {
+			"http://i.imgur.com/b8x0lRo.jpg",
+			"http://i.imgur.com/6PYDgS1.jpg",
+			"http://s10.postimg.org/ul4bea1i1/360_sbs_3_Dtest2_prev.jpg"
+		}, StereoType.OVER_UNDER),
+		
+		new PanoramaImage(new List<string>() {
+			"http://i.imgur.com/tufHhCF.jpg",
+			"http://i.imgur.com/80YzqAE.jpg",
+			"http://i.imgur.com/n0D9Isv.jpg",
+			"http://i.imgur.com/Sc2H8yU.jpg",
+			"http://realvision.ae/blog/wp-content/uploads/2014/11/Dirrogate_Airport_Stereoscopic_360_VR.jpg"
+		}, StereoType.OVER_UNDER)
+	};
 }
