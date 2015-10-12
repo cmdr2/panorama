@@ -160,29 +160,29 @@ public class Analytics : MonoBehaviour {
 	
 	public void LogScreen(string screenName) {
 		if (gav3) {
-			gav3.LogScreen(screenName + "");
-			gav3.LogScreen(screenName + ":" + sessionId);
+//			gav3.LogScreen(screenName + "");
+//			gav3.LogScreen(screenName + ":" + sessionId);
 		}
 	}
 	
 	public void LogEvent(string category, string action) {
 		if (gav3) {
-			gav3.LogEvent( new EventHitBuilder().SetEventCategory(category).SetEventAction(action) );
-			gav3.LogEvent( new EventHitBuilder().SetEventCategory(category + ":" + sessionId).SetEventAction(action) );
+//			gav3.LogEvent( new EventHitBuilder().SetEventCategory(category).SetEventAction(action) );
+//			gav3.LogEvent( new EventHitBuilder().SetEventCategory(category + ":" + sessionId).SetEventAction(action) );
 		}
 	}
 
 	public void LogTiming(string category, long interval, string name, string label) {
 		if (gav3) {
-			gav3.LogTiming(category, interval, name, label);
-			gav3.LogTiming(category + ":" + sessionId, interval, name, label);
+//			gav3.LogTiming(category, interval, name, label);
+//			gav3.LogTiming(category + ":" + sessionId, interval, name, label);
 		}
 	}
 	
 	public void LogException(string message, bool fatal) {
 		if (gav3) {
-			gav3.LogException(message, fatal);
-			gav3.LogException(message + ":" + sessionId, fatal);
+//			gav3.LogException(message, fatal);
+//			gav3.LogException(message + ":" + sessionId, fatal);
 		}
 	}
 	

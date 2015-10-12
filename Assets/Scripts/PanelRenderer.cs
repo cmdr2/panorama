@@ -129,16 +129,22 @@ public class PanelRenderer : MonoBehaviour {
 		}
 
 		firstImageLoadTimeout = Time.time + FIRST_IMAGE_LOAD_TIMEOUT_DURATION;
-		analytics.LogEvent ("Panorama", "Requested");
+		analytics.gav3.LogEvent ("Panorama:" + analytics.sessionId, "Requested", "foo", 1);
+		analytics.gav3.LogEvent ("Panorama:" + analytics.sessionId, "Requested2", "foo", 1);
+//		analytics.LogEvent ("Panorama", "Requested2");
 
 		taskQueue = new List<object> ();
+//		analytics.LogEvent ("Panorama", "DebugNewTaskQueue");
 		WWW www;
+//		analytics.LogEvent ("Panorama", "DebugNewWWW");
 		ImageInfo flickrImage;
+//		analytics.LogEvent ("Panorama", "DebugNewImageInfo");
 
 		// first try recommendation
 		flickrImage = GetRecommendedImage (analytics.viewCount);
 
-		analytics.LogEvent ("Panorama", "DebugGotRecommendation");
+//		analytics.LogEvent ("Panorama", "DebugGotRecommendation");
+		analytics.gav3.LogEvent ("Panorama" + analytics.sessionId, "DebugGotRecommendation", "foo", 1);
 
 		// else get random
 		if (flickrImage == null) {
