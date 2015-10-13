@@ -180,7 +180,7 @@ public class PanelRenderer : MonoBehaviour {
 	}
 
 	private IEnumerator FetchMono() {
-		analytics.gav3.LogEvent ("Panorama:" + analytics.sessionId, "RequestedMono", "foo", 1);
+//		analytics.gav3.LogEvent ("Panorama:" + analytics.sessionId, "RequestedMono", "foo", 1);
 //		analytics.LogEvent ("Panorama", "Requested");
 
 		WWW www;
@@ -192,7 +192,7 @@ public class PanelRenderer : MonoBehaviour {
 		flickrImage = GetRecommendedImage (analytics.monoViewCount);
 
 //		analytics.LogEvent ("Panorama", "DebugGotRecommendation");
-		analytics.gav3.LogEvent ("Panorama" + analytics.sessionId, "DebugGotRecommendation", "foo", 1);
+		analytics.gav3.LogEvent ("Panorama:" + analytics.sessionId, "DebugGotRecommendation", "foo", 1);
 
 		// else get random
 		if (flickrImage == null) {
@@ -457,6 +457,7 @@ public class PanelRenderer : MonoBehaviour {
 		if (isStereoMode) statusMessage.text = "";
 		if (taskIndex == 0) {
 			firstImageLoadTimeout = Time.time + IMAGE_VIEWING_TIMEOUT_DURATION;
+			analytics.gav3.LogEvent ("Panorama:" + analytics.sessionId, "RenderedBasicImage", "foo", 1);
 			fetchAudio.Play();
 		} else if (taskIndex == 2) {
 			analytics.LogEvent("Panorama", "LargeImageRendered");
