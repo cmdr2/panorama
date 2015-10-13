@@ -134,7 +134,7 @@ public class PanelRenderer : MonoBehaviour {
 
 		if (!isStereoMode && Cardboard.SDK.Tilted) {
 			isStereoMode = true;
-			StartCoroutine (Fetch ());
+			StartCoroutine (Fetch (true));
 			Handheld.Vibrate ();
 		}
 	}
@@ -143,8 +143,8 @@ public class PanelRenderer : MonoBehaviour {
 		transform.rotation = Quaternion.RotateTowards (transform.rotation, targetRotation, ROTATION_SPEED * Time.fixedDeltaTime);
 	}
 
-	private IEnumerator Fetch() {
-		if (Time.time < firstImageLoadTimeout) {
+	private IEnumerator Fetch(bool force = false) {
+		if (!force && Time.time < firstImageLoadTimeout) {
 			analytics.LogEvent("Panorama", "ThrottlingFetch");
 			yield break;
 		}
@@ -174,6 +174,11 @@ public class PanelRenderer : MonoBehaviour {
 			analytics.LogStereoViewCount ();
 		} else {
 			statusMessage.text = "Error getting stereoscopic panorama from index";
+		}
+
+		// clear previous info
+		foreach (Transform child in titleMessage.transform) {
+			Destroy(child.gameObject);
 		}
 
 		yield break;
@@ -241,14 +246,15 @@ public class PanelRenderer : MonoBehaviour {
 
 			statusMessage.text = "";
 
+			if (!isStereoMode) {
+				/* draw! */
+				DrawPanorama (image);
+				ShowInfo (flickrImage);
 
-			/* draw! */
-			DrawPanorama (image);
-			ShowInfo (flickrImage);
-
-			/* log */
-			analytics.LogMonoViewCount();
-			analytics.LogEvent ("Panorama", "ImagesLoading");
+				/* log */
+				analytics.LogMonoViewCount();
+				analytics.LogEvent ("Panorama", "ImagesLoading");
+			}
 		} else {
 			statusMessage.text = "Failed to find a panorama to show!";
 			analytics.LogException("Failed to extract URL from Flickriver", true);

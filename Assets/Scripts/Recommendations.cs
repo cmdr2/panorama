@@ -84,6 +84,56 @@ public class Recommendations {
 			"http://i.imgur.com/n0D9Isv.jpg",
 			"http://i.imgur.com/Sc2H8yU.jpg",
 			"http://realvision.ae/blog/wp-content/uploads/2014/11/Dirrogate_Airport_Stereoscopic_360_VR.jpg"
+		}, StereoType.OVER_UNDER),
+		
+		new PanoramaImage(new List<string>() {
+			"http://i.imgur.com/xAinxFG.jpg",
+			"http://i.imgur.com/RYeDcXw.jpg",
+			"http://i.imgur.com/s6LYWn3.jpg",
+			"http://i.imgur.com/1WNYzka.jpg",
+			"http://www.360-vr.net/misc/teidetour23_under_over_stereo_pair_4000.jpg"
+		}, StereoType.OVER_UNDER),
+		
+		new PanoramaImage(new List<string>() {
+			"http://i.imgur.com/NCWsF6Q.jpg",
+			"http://i.imgur.com/Xsxat81.jpg",
+			"http://i.imgur.com/4emjdWg.jpg",
+			"http://i.imgur.com/rhzb4JX.jpg",
+			"http://www.stereopanoramas.com/townhalloverunder360s.jpg"
+		}, StereoType.OVER_UNDER),
+		
+		new PanoramaImage(new List<string>() {
+			"http://i.imgur.com/Jq3Pb6Y.jpg",
+			"http://i.imgur.com/s7eSBeb.jpg",
+			"http://blog.dsky.co/wp-content/uploads/2015/09/06-VikingVillage_stereo_thumb.jpg"
+		}, StereoType.OVER_UNDER),
+		
+		new PanoramaImage(new List<string>() {
+			"http://i.imgur.com/AaPNfud.jpg",
+			"http://i.imgur.com/SMRbz40.jpg",
+			"http://i.imgur.com/9nU3mfQ.jpg",
+			"http://i.imgur.com/qbvlpOb.jpg",
+			"http://www.stereopanoramas.com/manningoverunder360stereo.jpg"
+		}, StereoType.OVER_UNDER),
+		
+		new PanoramaImage(new List<string>() {
+			"http://i.imgur.com/CtzLoYO.jpg",
+			"http://i.imgur.com/SyZ8yCm.jpg",
+			"http://3dx360.net/media/com_hwdmediashare/files/23/33/c5/ba9d35c5e2b554bd1b956826128eee2d.jpg"
+		}, StereoType.OVER_UNDER),
+		
+		new PanoramaImage(new List<string>() {
+			"http://i.imgur.com/18Of61h.jpg",
+			"http://i.imgur.com/XYb2MfA.jpg",
+			"http://projects.fun4mobile.de/wp-content/uploads/sites/2/2014/07/Example1.jpg"
+		}, StereoType.OVER_UNDER),
+		
+		new PanoramaImage(new List<string>() {
+			"http://i.imgur.com/ORmn0fT.jpg",
+			"http://i.imgur.com/OpMvzfp.jpg",
+			"http://i.imgur.com/mI6XYys.jpg",
+			"http://i.imgur.com/ybPna1c.jpg",
+			"http://i.imgur.com/SeqPiFg.jpg"
 		}, StereoType.OVER_UNDER)
 	};
 }
