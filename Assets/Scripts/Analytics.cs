@@ -95,7 +95,8 @@ public class Analytics : MonoBehaviour {
 			}
 
 			LogEvent("Application", "ReturnUser");
-			LogEvent("Application", "SessionCount:" + sessionCount);
+//			LogEvent("Application", "SessionCount:" + sessionCount);
+			gav3.LogEvent( new EventHitBuilder().SetEventCategory("Application").SetEventAction("SessionCount:" + sessionCount) );
 		} else {
 			firstTimeUser = true;
 		}
