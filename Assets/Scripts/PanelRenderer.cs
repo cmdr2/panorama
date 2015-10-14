@@ -96,7 +96,7 @@ public class PanelRenderer : MonoBehaviour {
 	}
 
 	void Update () {
-		bool triggered = Cardboard.SDK.CardboardTriggered || Input.GetButtonDown ("Fire1");
+		bool triggered = /*Cardboard.SDK.CardboardTriggered || */Input.GetButtonDown ("Fire1");
 		if (triggered) {
 			if (lastTriggerTime < 0) {
 				lastTriggerTime = Time.time;

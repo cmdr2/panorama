@@ -16,10 +16,10 @@
 
 extern "C" {
 
-extern void readProfile();
-extern void syncProfile();
+extern void VRBackButtonPressed();
 
-extern void createSettingsButton(id app, UIView* view);
+extern void cardboardPause(bool paused);
+extern void createUiLayer(id app, UIView* view);
 extern UIViewController* createSettingsDialog(id app);
 extern UIViewController* createOnboardingDialog(id app);
 
@@ -38,7 +38,15 @@ void launchSettingsDialog() {
   [app launchSettingsDialog];
 }
 
+// Prevent launching onboarding twice due to focus change when iOS asks
+// user for permission to use camera.
+static bool isOnboarding = false;
+
 void launchOnboardingDialog() {
+  if (isOnboarding) {
+    return;
+  }
+  isOnboarding = true;
   CardboardAppController* app = (CardboardAppController *)GetAppController();
   [app startSettingsDialog:createOnboardingDialog(app)];
 }
@@ -46,20 +54,20 @@ void launchOnboardingDialog() {
 void endSettingsDialog() {
   CardboardAppController* app = (CardboardAppController *)GetAppController();
   [app stopSettingsDialog];
+  isOnboarding = false;
+}
+
+float getScreenDPI() {
+  return ([[UIScreen mainScreen] scale] > 2.0f) ? 401.0f : 326.0f;
 }
 
 }  // extern "C"
 
 @implementation CardboardAppController
 
-- (void)preStartUnity {
-  [super preStartUnity];
-  syncProfile();
-}
-
 - (UnityView *)createUnityView {
   UnityView* unity_view = [super createUnityView];
-  createSettingsButton(self, (UIView *)unity_view);
+  createUiLayer(self, (UIView *)unity_view);
   return unity_view;
 }
 
@@ -77,12 +85,17 @@ void endSettingsDialog() {
   [self pause:NO];
 }
 
+- (void)vrBackButtonPressed {
+  VRBackButtonPressed();
+}
+
 - (void)pause:(bool)paused {
 #if UNITY_VERSION < 462
   UnityPause(paused);
 #else
   self.paused = paused;
 #endif
+  cardboardPause(paused);
 }
 
 @end

@@ -1,3 +1,11 @@
 Base path: /Applications/Unity/Unity.app/Contents
 Pipe name: \\.\pipe\UnityShaderCompiler-64bit-1-1929782032
 Cmd: getPlatforms
+Cmd: compileSnippet
+  api=0 type=0 insize=958 outsize=583 kw= pd= ok=1
+Cmd: compileSnippet
+  api=0 type=1 insize=958 outsize=6 kw= pd= ok=1
+Cmd: compileSnippet
+  api=5 type=0 insize=958 outsize=881 kw= pd=UNITY_NO_DXT5nm UNITY_NO_RGBM UNITY_NO_SCREENSPACE_SHADOWS UNITY_NO_LINEAR_COLORSPACE ok=1
+Cmd: compileSnippet
+  api=5 type=1 insize=958 outsize=6 kw= pd=UNITY_NO_DXT5nm UNITY_NO_RGBM UNITY_NO_SCREENSPACE_SHADOWS UNITY_NO_LINEAR_COLORSPACE ok=1
