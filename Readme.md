@@ -22,6 +22,7 @@ feel free to contribute or fork to create your own panoramas application for per
 1. [Virtual Places](https://play.google.com/store/apps/details?id=org.cmdr2.places)
 
 ## development
+* get a Google Cardboard. either search on google for cheaper options in your country, or see this list of [viewers in US/EU](https://www.google.com/get/cardboard/get-cardboard/)
 * install [Unity 5.x](https://unity3d.com/get-unity/download) (free or pro)
 * `git clone git@github.com:cmdr2/panorama.git`
 * open the downloaded panoramas project in Unity
