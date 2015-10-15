@@ -44,5 +44,7 @@ feel free to contribute or fork to create your own panoramas application for per
 
 ## contact
 **email:** secondary 'dot' cmdr2 'at' gmail 'dot' com
+
 **reddit:** [u/cmdr2](http://reddit.com/u/cmdr2)
+
 **twitter:** [cmdr2](http://twitter.com/cmdr2)
