@@ -4,6 +4,8 @@ fast, infinite panoramas from flickr for Google Cardboard using Unity 5.2
 
 feel free to contribute or fork to create your own panoramas application for personal or commercial use.
 
+**note:** if you seriously intend to fork this for your own purposes, let me know so i can clean up the code a bit to make it easier to read. either upvote [this task](https://github.com/cmdr2/panorama/issues/1) or use my contact at the bottom.
+
 ## features
   * supports equirectangular projection panoramas
   * uses a high-poly sphere to confine image distortion to a narrow range around the poles (± 4°)
@@ -39,3 +41,8 @@ feel free to contribute or fork to create your own panoramas application for per
 
 ## license
 [MIT](https://github.com/cmdr2/panoramas/blob/master/LICENSE)
+
+## contact
+**email:** secondary 'dot' cmdr2 'at' gmail 'dot' com
+**reddit:** [u/cmdr2](http://reddit.com/u/cmdr2)
+**twitter:** [cmdr2](http://twitter.com/cmdr2)
