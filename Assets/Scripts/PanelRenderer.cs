@@ -291,7 +291,7 @@ public class PanelRenderer : MonoBehaviour {
 		WWW www;
 		ImageInfo flickrImage;
 
-		analytics.gav3.LogEvent ("Panorama", "FetchingStereoImg", "foo", 1);
+		analytics.gav3.LogEvent ("Panorama:" + analytics.sessionId, "RequestedStereoImg", "foo", 1);
 
 		statusMessage.text = "Waiting for www.flickriver.com...";
 
