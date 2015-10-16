@@ -27,6 +27,8 @@ public class PanelRenderer : MonoBehaviour {
 	public Material rightOUPanoramaMat;
 	public Material leftOUInvPanoramaMat;
 	public Material rightOUInvPanoramaMat;
+	public Material leftCrossImgMat;
+	public Material rightCrossImgMat;
 
 	private TextMesh statusMessage;
 	private GameObject titleMessage;
@@ -34,10 +36,12 @@ public class PanelRenderer : MonoBehaviour {
 	private GameObject monoEyePano;
 	private GameObject leftEyePano;
 	private GameObject rightEyePano;
+	private GameObject leftEyeImg;
+	private GameObject rightEyeImg;
 
 
 	/* globals */
-	private const float PX_TO_METERS = 0.02f;
+	private const float PX_TO_METERS = 0.025f;
 	private const int MAX_ROWS = 3;
 	private const float ROTATION_DURATION = 0.2f; // seconds
 	private const float ROTATION_SPEED = 180 / ROTATION_DURATION; // degrees per second
@@ -55,10 +59,12 @@ public class PanelRenderer : MonoBehaviour {
 	private const float TUTORIAL_ONE_REPEAT_DURATION = 4.5f; // seconds
 
 	private const string IMAGES_URL = "http://www.flickriver.com/groups/equirectangular/pool/random/";
+	private const string STEREO_IMAGES_URL = "http://www.flickriver.com/groups/3d-cross-view/pool/random/";
 
 
 	/* scratchpad */
-	private bool isStereoMode = false;
+	private bool isStereoPanoMode = false;
+	private bool isStereoImgMode = false;
 
 	private Shader PANORAMA_SHADER;
 	private float rotation = 0f;
@@ -79,6 +85,8 @@ public class PanelRenderer : MonoBehaviour {
 	private Analytics analytics;
 	private float nextHealthCheckTime = -1; // seconds
 
+	private float tiltLockTime = -1; // seconds
+
 
 	void Start () {
 		PANORAMA_SHADER = Shader.Find ("InsideVisible");
@@ -86,6 +94,8 @@ public class PanelRenderer : MonoBehaviour {
 		monoEyePano = GameObject.Find ("monoEyePano");
 		leftEyePano = GameObject.Find ("leftEyePano");
 		rightEyePano = GameObject.Find ("rightEyePano");
+		leftEyeImg = GameObject.Find ("leftEyeImg");
+		rightEyeImg = GameObject.Find ("rightEyeImg");
 
 		titleMessage = GameObject.Find ("TitleMessage");
 		fetchAudio = GetComponent<AudioSource> ();
@@ -132,8 +142,18 @@ public class PanelRenderer : MonoBehaviour {
 			statusMessage.text = "";
 		}
 
-		if (!isStereoMode && Cardboard.SDK.Tilted) {
-			isStereoMode = true;
+		if (Cardboard.SDK.Tilted && Time.time > tiltLockTime) {
+			tiltLockTime = Time.time + 5;
+			if (!isStereoPanoMode && !isStereoImgMode) {
+				isStereoPanoMode = true;
+				isStereoImgMode = false;
+			} else if (isStereoPanoMode && !isStereoImgMode) {
+				isStereoPanoMode = false;
+				isStereoImgMode = true;
+			} else {
+				isStereoPanoMode = false;
+				isStereoImgMode = false;
+			}
 			StartCoroutine (Fetch (true));
 			Handheld.Vibrate ();
 		}
@@ -155,7 +175,13 @@ public class PanelRenderer : MonoBehaviour {
 
 		taskQueue = new List<object> ();
 
-		yield return ( isStereoMode ? StartCoroutine (FetchStereo ()) : StartCoroutine (FetchMono ()) );
+		if (isStereoPanoMode) {
+			yield return StartCoroutine (FetchStereo ());
+		} else if (isStereoImgMode) {
+			yield return StartCoroutine (FetchStereoImg ());
+		} else {
+			yield return StartCoroutine (FetchMono ());
+		}
 	}
 
 	private IEnumerator FetchStereo() {
@@ -246,7 +272,7 @@ public class PanelRenderer : MonoBehaviour {
 
 			statusMessage.text = "";
 
-			if (!isStereoMode) {
+			if (!isStereoPanoMode && !isStereoImgMode) {
 				/* draw! */
 				DrawPanorama (image);
 				ShowInfo (flickrImage);
@@ -261,15 +287,55 @@ public class PanelRenderer : MonoBehaviour {
 		}
 	}
 
+	private IEnumerator FetchStereoImg() {
+		WWW www;
+		ImageInfo flickrImage;
+
+		analytics.gav3.LogEvent ("Panorama", "FetchingStereoImg", "foo", 1);
+
+		statusMessage.text = "Waiting for www.flickriver.com...";
+
+		www = new WWW (STEREO_IMAGES_URL);
+		print ("Fetching page: " + STEREO_IMAGES_URL);
+		yield return www;
+		
+		flickrImage = ExtractFromFlickriver (www.text);
+		if (flickrImage != null) {
+			flickrImage.imageId = ExtractIdFromFlickrUrl(flickrImage.url);
+		}
+
+		if (flickrImage != null) {
+			www = new WWW (flickrImage.url);
+			statusMessage.text = "Waiting for www.flickr.com...";
+			print ("Fetching page: " + flickrImage.url);
+			yield return www;
+
+			PanoramaImage image = ExtractFromFlickr (www.text);
+			image.stereoType = StereoType.CROSS_EYE;
+			flickrImage.width /= 2;
+			image.imageInfo = flickrImage;
+			www = null;
+			
+			statusMessage.text = "";
+
+			DrawPanorama (image);
+		} else {
+			statusMessage.text = "Failed to find a stereo image to show!";
+			analytics.LogException("Failed to extract URL from Flickriver", true);
+		}
+	}
+
 	private ImageInfo ExtractFromFlickriver (string body) {
-		var match = Regex.Match(body, @"<a class=""noborder""  target=""_blank""  href=""(\S+)""><img class=""photo-panel-img"" id.+?alt=""([^""]+)""");
+		var match = Regex.Match(body, @"<a class=""noborder""  target=""_blank""  href=""(\S+)""><img class=""photo-panel-img"" id.+?width=""(\d+)"" height=""(\d+)"".+?alt=""([^""]+)""");
 		var authorMatch = Regex.Match(body, @"by  <a  href="".+?"">([^<]+)</a>");
 
 		if (match.Success) {
 			ImageInfo flickrImage = new ImageInfo ();
 
 			flickrImage.url = match.Groups [1].Value;
-			flickrImage.title = match.Groups [2].Value;
+			flickrImage.width = int.Parse(match.Groups [2].Value);
+			flickrImage.height = int.Parse(match.Groups [3].Value);
+			flickrImage.title = match.Groups [4].Value;
 			flickrImage.author = (authorMatch.Success ? authorMatch.Groups [1].Value : "");
 
 			return flickrImage;
@@ -342,6 +408,8 @@ public class PanelRenderer : MonoBehaviour {
 				monoEyePano.SetActive(true);
 				leftEyePano.SetActive(false);
 				rightEyePano.SetActive(false);
+				leftEyeImg.SetActive(false);
+				rightEyeImg.SetActive(false);
 				break;
 			case StereoType.SBS:
 				m1 = new Material(leftSBSPanoramaMat);
@@ -349,6 +417,8 @@ public class PanelRenderer : MonoBehaviour {
 				monoEyePano.SetActive(false);
 				leftEyePano.SetActive(true);
 				rightEyePano.SetActive(true);
+				leftEyeImg.SetActive(false);
+				rightEyeImg.SetActive(false);
 				break;
 			case StereoType.OVER_UNDER:
 				m1 = new Material(leftOUPanoramaMat);
@@ -356,6 +426,8 @@ public class PanelRenderer : MonoBehaviour {
 				monoEyePano.SetActive(false);
 				leftEyePano.SetActive(true);
 				rightEyePano.SetActive(true);
+				leftEyeImg.SetActive(false);
+				rightEyeImg.SetActive(false);
 				break;
 			case StereoType.OVER_UNDER_INV:
 				m1 = new Material(leftOUInvPanoramaMat);
@@ -363,6 +435,17 @@ public class PanelRenderer : MonoBehaviour {
 				monoEyePano.SetActive(false);
 				leftEyePano.SetActive(true);
 				rightEyePano.SetActive(true);
+				leftEyeImg.SetActive(false);
+				rightEyeImg.SetActive(false);
+				break;
+			case StereoType.CROSS_EYE:
+				m1 = new Material(leftCrossImgMat);
+				m2 = new Material(rightCrossImgMat);
+				monoEyePano.SetActive(false);
+				leftEyePano.SetActive(false);
+				rightEyePano.SetActive(false);
+				leftEyeImg.SetActive(true);
+				rightEyeImg.SetActive(true);
 				break;
 			}
 
@@ -376,6 +459,23 @@ public class PanelRenderer : MonoBehaviour {
 			}
 			if (rightEyePano.activeSelf) {
 				rightEyePano.GetComponent<Renderer>().sharedMaterial = m2;
+				mats = new List<Material>() {m1, m2};
+			}
+
+			if (leftEyeImg.activeSelf) {
+				leftEyeImg.GetComponent<Renderer>().sharedMaterial = m1;
+				leftEyeImg.transform.localScale = new Vector3(image.imageInfo.width * PX_TO_METERS, image.imageInfo.height * PX_TO_METERS, 1);
+				leftEyeImg.transform.position = 133.4f * statusMessage.gameObject.transform.parent.transform.forward;
+				leftEyeImg.transform.LookAt(Vector3.zero);
+				leftEyeImg.transform.RotateAround(leftEyeImg.transform.position, leftEyeImg.transform.up, 180f);
+				mats = new List<Material>() {m1, m2};
+			}
+			if (rightEyeImg.activeSelf) {
+				rightEyeImg.GetComponent<Renderer>().sharedMaterial = m2;
+				rightEyeImg.transform.localScale = new Vector3(image.imageInfo.width * PX_TO_METERS, image.imageInfo.height * PX_TO_METERS, 1);
+				rightEyeImg.transform.position = 133.4f * statusMessage.gameObject.transform.parent.transform.forward;
+				rightEyeImg.transform.LookAt(Vector3.zero);
+				rightEyeImg.transform.RotateAround(rightEyeImg.transform.position, rightEyeImg.transform.up, 180f);
 				mats = new List<Material>() {m1, m2};
 			}
 
@@ -460,7 +560,7 @@ public class PanelRenderer : MonoBehaviour {
 		www = null;
 		
 		analytics.LogEvent("Panorama", "ImageRendered");
-		if (isStereoMode) statusMessage.text = "";
+		if (isStereoPanoMode) statusMessage.text = "";
 		if (taskIndex == 0) {
 			firstImageLoadTimeout = Time.time + IMAGE_VIEWING_TIMEOUT_DURATION;
 			analytics.gav3.LogEvent ("Panorama:" + analytics.sessionId, "RenderedBasicImage", "foo", 1);
@@ -566,12 +666,13 @@ public class PanelRenderer : MonoBehaviour {
 }
 
 public enum StereoType { // stereotypical enum
-	SBS, OVER_UNDER, OVER_UNDER_INV, NONE
+	SBS, OVER_UNDER, OVER_UNDER_INV, CROSS_EYE, NONE
 };
 
 public class PanoramaImage {
 	public List<string> url = new List<string>();
 	public StereoType stereoType = StereoType.NONE;
+	public ImageInfo imageInfo;
 
 	public PanoramaImage() {}
 
@@ -587,6 +688,8 @@ public class PanoramaImage {
 
 public class ImageInfo {
 	public string url;
+	public int width;
+	public int height;
 	public string author;
 	public string title;
 	public long imageId;
