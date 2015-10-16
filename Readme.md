@@ -8,8 +8,10 @@ feel free to contribute or fork to create your own panoramas application for per
 
 ## features
   * supports equirectangular projection panoramas
-  * uses a high-poly sphere to confine image distortion to a narrow range around the poles (± 4°)
+  * uses a high-poly sphere to confine image distortion to a narrow range around the poles (± 8°)
   * progressive loading of image by resolution to speed up time-to-first-pixel
+  * experimental support for stereoscopic (3d) equirectangular panoramas in SBS or OVER-UNDER format
+  * experimental support for stereoscopic (3d) photos in CROSS-EYE or PARALLEL format
   * provides control to turn panorama by 180° to help seated users look behind them
   * provides control to load a random new panorama
   * includes Google Analytics with anonymized IPs to help monitor errors and application performance in the real world
@@ -44,8 +46,6 @@ feel free to contribute or fork to create your own panoramas application for per
 [MIT](https://github.com/cmdr2/panoramas/blob/master/LICENSE)
 
 ## contact
-**email:** secondary 'dot' cmdr2 'at' gmail 'dot' com
-
-**reddit:** [u/cmdr2](http://reddit.com/u/cmdr2)
-
-**twitter:** [cmdr2](http://twitter.com/cmdr2)
+* **email:** secondary 'dot' cmdr2 'at' gmail 'dot' com
+* **reddit:** [u/cmdr2](http://reddit.com/u/cmdr2)
+* **twitter:** [cmdr2](http://twitter.com/cmdr2)
