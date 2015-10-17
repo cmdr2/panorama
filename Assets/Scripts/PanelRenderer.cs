@@ -38,6 +38,7 @@ public class PanelRenderer : MonoBehaviour {
 	private GameObject rightEyePano;
 	private GameObject leftEyeImg;
 	private GameObject rightEyeImg;
+	private GameObject imgCaption;
 
 
 	/* globals */
@@ -86,6 +87,7 @@ public class PanelRenderer : MonoBehaviour {
 	private float nextHealthCheckTime = -1; // seconds
 
 	private float tiltLockTime = -1; // seconds
+	private ShuffleBag renderOrder;
 
 
 	void Start () {
@@ -96,11 +98,16 @@ public class PanelRenderer : MonoBehaviour {
 		rightEyePano = GameObject.Find ("rightEyePano");
 		leftEyeImg = GameObject.Find ("leftEyeImg");
 		rightEyeImg = GameObject.Find ("rightEyeImg");
+		imgCaption = GameObject.Find ("imgCaption");
 
 		titleMessage = GameObject.Find ("TitleMessage");
 		fetchAudio = GetComponent<AudioSource> ();
 		analytics = GameObject.Find ("Analytics").GetComponent<Analytics>();
 		analytics.Init ();
+
+		renderOrder = new ShuffleBag (20);
+		renderOrder.Add ('P', 10);
+		renderOrder.Add ('I', 10);
 
 		StartCoroutine (Fetch ());
 	}
@@ -181,10 +188,14 @@ public class PanelRenderer : MonoBehaviour {
 			yield return StartCoroutine (FetchStereoImg ());
 		} else {
 			// let's do random selection
-			if (Random.value > 0.5) {
+			char type = renderOrder.Next();
+			switch (type) {
+			case 'P':
 				yield return StartCoroutine (FetchMono ());
-			} else {
+				break;
+			case 'I':
 				yield return StartCoroutine (FetchStereoImg ());
+				break;
 			}
 		}
 	}
@@ -474,6 +485,15 @@ public class PanelRenderer : MonoBehaviour {
 				leftEyeImg.transform.LookAt(Vector3.zero);
 				leftEyeImg.transform.RotateAround(leftEyeImg.transform.position, leftEyeImg.transform.up, 180f);
 				mats = new List<Material>() {m1, m2};
+
+				imgCaption.transform.localPosition = new Vector3(0, -0.55f, 0);
+				imgCaption.transform.localRotation = Quaternion.identity;
+				TextMesh caption = imgCaption.GetComponent<TextMesh>();
+				caption.anchor = TextAnchor.MiddleCenter;
+				caption.color = Color.black;
+				string shortUrl = "flic.kr/p/" + Base58.Encode(image.imageInfo.imageId);
+				caption.text = "by: " + image.imageInfo.author + " (" + shortUrl + ")";
+				caption.characterSize = 0.3f;
 			}
 			if (rightEyeImg.activeSelf) {
 				rightEyeImg.GetComponent<Renderer>().sharedMaterial = m2;
