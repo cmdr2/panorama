@@ -30,6 +30,8 @@ public class Analytics : MonoBehaviour {
 	[HideInInspector]
 	public bool tutorialTwoFinished;
 	[HideInInspector]
+	public bool feedbackFinished;
+	[HideInInspector]
 	public int monoViewCount = 0;
 	[HideInInspector]
 	public int stereoViewCount = 0;
@@ -41,6 +43,7 @@ public class Analytics : MonoBehaviour {
 	private string TUTORIAL_ONE_FILE;
 	private string TUTORIAL_ONE_REPEAT_FILE;
 	private string TUTORIAL_TWO_FILE;
+	private string FEEDBACK_FILE;
 	private string VIEW_COUNT_FILE;
 	
 	
@@ -60,6 +63,7 @@ public class Analytics : MonoBehaviour {
 		TUTORIAL_ONE_FILE = Application.persistentDataPath + Path.DirectorySeparatorChar + "Tut1";
 		TUTORIAL_ONE_REPEAT_FILE = Application.persistentDataPath + Path.DirectorySeparatorChar + "Tut1Repeat";
 		TUTORIAL_TWO_FILE = Application.persistentDataPath + Path.DirectorySeparatorChar + "Tut2";
+		FEEDBACK_FILE = Application.persistentDataPath + Path.DirectorySeparatorChar + "Fdbk";
 		VIEW_COUNT_FILE = Application.persistentDataPath + Path.DirectorySeparatorChar + "VC";
 
 		try {
@@ -119,6 +123,7 @@ public class Analytics : MonoBehaviour {
 		tutorialOneFinished = File.Exists (TUTORIAL_ONE_FILE);
 		tutorialOneRepeatFinished = File.Exists (TUTORIAL_ONE_REPEAT_FILE);
 		tutorialTwoFinished = File.Exists (TUTORIAL_TWO_FILE);
+		feedbackFinished = File.Exists (FEEDBACK_FILE);
 
 		if (File.Exists (VIEW_COUNT_FILE)) {
 			try {
@@ -213,6 +218,14 @@ public class Analytics : MonoBehaviour {
 		sw.Close();
 		tutorialTwoFinished = true;
 		LogEvent ("Tutorial", "TwoDone");
+	}
+	
+	public void LogFeedbackDone() {
+		var sw = new StreamWriter(FEEDBACK_FILE);
+		sw.Write(" ");
+		sw.Close();
+		feedbackFinished = true;
+		LogEvent ("Tutorial", "FeedbackDone");
 	}
 
 	public void LogMonoViewCount() {

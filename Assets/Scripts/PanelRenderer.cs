@@ -8,6 +8,8 @@ using System.Diagnostics;
 /**
  * Main class for fetching and rendering panoramas
  * 
+ * GAH, MY EYES! (THIS CLASS BADLY NEEDS TO BE REFACTORED)
+ * 
  * Controls:
  *  - Single 'Ctrl' press = turn around 180 degrees
  *  - Double 'Ctrl' press = load new images
@@ -58,7 +60,10 @@ public class PanelRenderer : MonoBehaviour {
 	private const string TUTORIAL_TWO_TXT = "<b>Pro tip, give it a try!</b>\nPush down and leave " +
 		"trigger ONCE and <b>WAIT</b>\nto see behind you.\n<i>(or</i> press Fire1 ONCE and <b>WAIT</b>)";
 
+	private const string FEEDBACK_TXT = "I'd love to hear\nyour suggestions on\nPlay Store";
+
 	private const float TUTORIAL_ONE_REPEAT_DURATION = 4.5f; // seconds
+	private const float FEEDBACK_DURATION = 4.5f; // seconds
 
 	private const string IMAGES_URL = "http://www.flickriver.com/groups/equirectangular/pool/random/";
 	private const string STEREO_IMAGES_URL = "http://www.flickriver.com/groups/3d-cross-view/pool/random/";
@@ -78,8 +83,10 @@ public class PanelRenderer : MonoBehaviour {
 	private bool tutorialOneVisible;
 	private bool tutorialOneRepeatVisible;
 	private bool tutorialTwoVisible;
+	private bool feedbackVisible;
 
 	private float tutorialOneRepeatEndTime = -1; // seconds
+	private float feedbackEndTime = -1; // seconds
 	private Stopwatch ctf;
 
 	private List<object> taskQueue = new List<object>();
@@ -152,6 +159,11 @@ public class PanelRenderer : MonoBehaviour {
 
 		if (tutorialOneRepeatVisible && Time.time > tutorialOneRepeatEndTime) {
 			tutorialOneRepeatVisible = false;
+			statusMessage.text = "";
+		}
+
+		if (feedbackVisible && Time.time > feedbackEndTime) {
+			feedbackVisible = false;
 			statusMessage.text = "";
 		}
 
@@ -626,20 +638,33 @@ public class PanelRenderer : MonoBehaviour {
 			tutorialOneVisible = true;
 			tutorialOneRepeatVisible = false;
 			tutorialTwoVisible = false;
+			feedbackVisible = false;
 		} else if (!analytics.tutorialOneRepeatFinished) {
 			statusMessage.text = TUTORIAL_ONE_REPEAT_TXT;
 			tutorialOneVisible = false;
 			tutorialOneRepeatVisible = true;
 			tutorialTwoVisible = false;
+			feedbackVisible = false;
 			
 			tutorialOneRepeatEndTime = Time.time + TUTORIAL_ONE_REPEAT_DURATION;
 			
-			TutorialOneRepeatCompleted();
+			TutorialOneRepeatCompleted ();
 		} else if (!analytics.tutorialTwoFinished && analytics.sessionCount >= 3 && currentRenderMode == 'P') {
 			statusMessage.text = TUTORIAL_TWO_TXT;
 			tutorialOneVisible = false;
 			tutorialOneRepeatVisible = false;
 			tutorialTwoVisible = true;
+			feedbackVisible = false;
+		} else if (analytics.tutorialTwoFinished && !analytics.feedbackFinished && analytics.sessionCount >= 5) {
+			statusMessage.text = FEEDBACK_TXT;
+			tutorialOneVisible = false;
+			tutorialOneRepeatVisible = false;
+			tutorialTwoVisible = false;
+			feedbackVisible = true;
+
+			feedbackEndTime = Time.time + FEEDBACK_DURATION;
+			
+			FeedbackCompleted ();
 		}
 	}
 	
@@ -710,6 +735,11 @@ public class PanelRenderer : MonoBehaviour {
 		tutorialOneVisible = false;
 		tutorialOneRepeatVisible = false;
 		tutorialTwoVisible = false;
+		feedbackVisible = false;
+	}
+	
+	private void FeedbackCompleted() {
+		analytics.LogFeedbackDone ();
 	}
 }
 
