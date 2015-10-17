@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
 
+
 /**
  * Main class for fetching and rendering panoramas
  * 
@@ -81,13 +82,16 @@ public class PanelRenderer : MonoBehaviour {
 	private float tutorialOneRepeatEndTime = -1; // seconds
 	private Stopwatch ctf;
 
-	private List<object> taskQueue;
+	private List<object> taskQueue = new List<object>();
+	private List<object> tasksToGCNext = new List<object>();
 
 	private Analytics analytics;
 	private float nextHealthCheckTime = -1; // seconds
 
 	private float tiltLockTime = -1; // seconds
 	private ShuffleBag renderOrder;
+	private char currentRenderMode = 'P';
+	private char nextRenderMode = 'P';
 
 
 	void Start () {
@@ -135,9 +139,11 @@ public class PanelRenderer : MonoBehaviour {
 		if (lastTriggerTime >= 0 && Time.time > lastTriggerTime + DOUBLE_TRIGGER_INTERVAL) {
 			lastTriggerTime = -100f;
 			// single trigger stuff
-			
-			rotation += 180f;
-			targetRotation = Quaternion.Euler(0, rotation, 0);
+
+			if (currentRenderMode != 'I') {
+				rotation += 180f;
+				targetRotation = Quaternion.Euler(0, rotation, 0);
+			}
 			
 			if (tutorialTwoVisible) {
 				TutorialTwoCompleted();
@@ -180,16 +186,24 @@ public class PanelRenderer : MonoBehaviour {
 
 		analytics.gav3.LogEvent ("Panorama:" + analytics.sessionId, "Requested", "foo", 1);
 
+		tasksToGCNext.AddRange (taskQueue);
 		taskQueue = new List<object> ();
+
+		foreach (object o in tasksToGCNext) {
+			if (o is ApplyImageTask) {
+				ApplyImageTask t = (ApplyImageTask)o;
+				t.Dispose();
+			}
+		}
+		tasksToGCNext.Clear ();
 
 		if (isStereoPanoMode) {
 			yield return StartCoroutine (FetchStereo ());
 		} else if (isStereoImgMode) {
 			yield return StartCoroutine (FetchStereoImg ());
 		} else {
-			// let's do random selection
-			char type = renderOrder.Next();
-			switch (type) {
+			currentRenderMode = nextRenderMode;
+			switch (currentRenderMode) {
 			case 'P':
 				yield return StartCoroutine (FetchMono ());
 				break;
@@ -197,6 +211,7 @@ public class PanelRenderer : MonoBehaviour {
 				yield return StartCoroutine (FetchStereoImg ());
 				break;
 			}
+			nextRenderMode = renderOrder.Next();
 		}
 	}
 
@@ -339,6 +354,12 @@ public class PanelRenderer : MonoBehaviour {
 			statusMessage.text = "Failed to find a stereo image to show!";
 			analytics.LogException("Failed to extract URL from Flickriver", true);
 		}
+
+		// clear previous info
+		foreach (Transform child in titleMessage.transform) {
+			Destroy(child.gameObject);
+		}
+
 	}
 
 	private ImageInfo ExtractFromFlickriver (string body) {
@@ -414,6 +435,7 @@ public class PanelRenderer : MonoBehaviour {
 	private void DrawPanorama(PanoramaImage image){
 		try {
 			taskQueue = new List<object> ();
+			tasksToGCNext = new List<object> ();
 
 			List<Material> mats = null;
 			Material m1 = null, m2 = null;
@@ -532,6 +554,7 @@ public class PanelRenderer : MonoBehaviour {
 			try {
 				t = taskQueue[0];
 				taskQueue.RemoveAt(0);
+				tasksToGCNext.Add(t);
 			} catch (System.Exception e) {
 				analytics.LogException("Error pulling task: " + e.Message + "; " + e.StackTrace, true);
 				continue;
@@ -612,7 +635,7 @@ public class PanelRenderer : MonoBehaviour {
 			tutorialOneRepeatEndTime = Time.time + TUTORIAL_ONE_REPEAT_DURATION;
 			
 			TutorialOneRepeatCompleted();
-		} else if (!analytics.tutorialTwoFinished && analytics.sessionCount >= 3) {
+		} else if (!analytics.tutorialTwoFinished && analytics.sessionCount >= 3 && currentRenderMode == 'P') {
 			statusMessage.text = TUTORIAL_TWO_TXT;
 			tutorialOneVisible = false;
 			tutorialOneRepeatVisible = false;
@@ -737,12 +760,16 @@ public class ImageInfo {
 
 class ShowTutorialTask {}
 
-class ApplyImageTask {
+class ApplyImageTask : System.IDisposable {
 	public string url;
 	public List<Material> mats;
 
 	public ApplyImageTask(string url, List<Material> mats) {
 		this.url = url;
 		this.mats = mats;
+	}
+
+	public void Dispose() {
+		mats = null;
 	}
 }
