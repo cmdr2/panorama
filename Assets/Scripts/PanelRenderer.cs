@@ -41,7 +41,7 @@ public class PanelRenderer : MonoBehaviour {
 
 
 	/* globals */
-	private const float PX_TO_METERS = 0.025f;
+	private const float PX_TO_METERS = 0.065f;
 	private const int MAX_ROWS = 3;
 	private const float ROTATION_DURATION = 0.2f; // seconds
 	private const float ROTATION_SPEED = 180 / ROTATION_DURATION; // degrees per second
@@ -180,7 +180,12 @@ public class PanelRenderer : MonoBehaviour {
 		} else if (isStereoImgMode) {
 			yield return StartCoroutine (FetchStereoImg ());
 		} else {
-			yield return StartCoroutine (FetchMono ());
+			// let's do random selection
+			if (Random.value > 0.5) {
+				yield return StartCoroutine (FetchMono ());
+			} else {
+				yield return StartCoroutine (FetchStereoImg ());
+			}
 		}
 	}
 
