@@ -116,9 +116,9 @@ public class PanelRenderer : MonoBehaviour {
 		analytics = GameObject.Find ("Analytics").GetComponent<Analytics>();
 		analytics.Init ();
 
-		renderOrder = new ShuffleBag (20);
+		/*renderOrder = new ShuffleBag (20);
 		renderOrder.Add ('P', 10);
-		renderOrder.Add ('I', 10);
+		renderOrder.Add ('I', 10);*/
 
 		StartCoroutine (Fetch ());
 	}
@@ -147,10 +147,10 @@ public class PanelRenderer : MonoBehaviour {
 			lastTriggerTime = -100f;
 			// single trigger stuff
 
-			if (currentRenderMode != 'I') {
-				rotation += 180f;
-				targetRotation = Quaternion.Euler(0, rotation, 0);
-			}
+//			if (currentRenderMode != 'I') {
+			rotation += 180f;
+			targetRotation = Quaternion.Euler(0, rotation, 0);
+//			}
 			
 			if (tutorialTwoVisible) {
 				TutorialTwoCompleted();
@@ -214,7 +214,8 @@ public class PanelRenderer : MonoBehaviour {
 		} else if (isStereoImgMode) {
 			yield return StartCoroutine (FetchStereoImg ());
 		} else {
-			currentRenderMode = nextRenderMode;
+			yield return StartCoroutine (FetchMono ());
+			/*currentRenderMode = nextRenderMode;
 			switch (currentRenderMode) {
 			case 'P':
 				yield return StartCoroutine (FetchMono ());
@@ -223,7 +224,7 @@ public class PanelRenderer : MonoBehaviour {
 				yield return StartCoroutine (FetchStereoImg ());
 				break;
 			}
-			nextRenderMode = renderOrder.Next();
+			nextRenderMode = renderOrder.Next();*/
 		}
 	}
 
@@ -649,7 +650,7 @@ public class PanelRenderer : MonoBehaviour {
 			tutorialOneRepeatEndTime = Time.time + TUTORIAL_ONE_REPEAT_DURATION;
 			
 			TutorialOneRepeatCompleted ();
-		} else if (!analytics.tutorialTwoFinished && analytics.sessionCount >= 3 && currentRenderMode == 'P') {
+		} else if (!analytics.tutorialTwoFinished && analytics.sessionCount >= 3/* && currentRenderMode == 'P'*/) {
 			statusMessage.text = TUTORIAL_TWO_TXT;
 			tutorialOneVisible = false;
 			tutorialOneRepeatVisible = false;
