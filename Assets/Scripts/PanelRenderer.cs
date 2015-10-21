@@ -42,6 +42,8 @@ public class PanelRenderer : MonoBehaviour {
 	private GameObject leftEyeImg;
 	private GameObject rightEyeImg;
 	private GameObject imgCaption;
+	private GameObject reportImage;
+	private GameObject saveFavorite;
 
 
 	/* globals */
@@ -100,6 +102,8 @@ public class PanelRenderer : MonoBehaviour {
 	private char currentRenderMode = 'P';
 	private char nextRenderMode = 'P';
 
+	public long currentImageId;
+
 
 	void Start () {
 		PANORAMA_SHADER = Shader.Find ("InsideVisible");
@@ -110,6 +114,8 @@ public class PanelRenderer : MonoBehaviour {
 		leftEyeImg = GameObject.Find ("leftEyeImg");
 		rightEyeImg = GameObject.Find ("rightEyeImg");
 		imgCaption = GameObject.Find ("imgCaption");
+		reportImage = GameObject.Find ("reportImage");
+		saveFavorite = GameObject.Find ("saveFavorite");
 
 		titleMessage = GameObject.Find ("TitleMessage");
 		fetchAudio = GetComponent<AudioSource> ();
@@ -147,10 +153,10 @@ public class PanelRenderer : MonoBehaviour {
 			lastTriggerTime = -100f;
 			// single trigger stuff
 
-//			if (currentRenderMode != 'I') {
-			rotation += 180f;
-			targetRotation = Quaternion.Euler(0, rotation, 0);
-//			}
+			if (currentRenderMode != 'I' && !isStereoImgMode) {
+				rotation += 180f;
+				targetRotation = Quaternion.Euler(0, rotation, 0);
+			}
 			
 			if (tutorialTwoVisible) {
 				TutorialTwoCompleted();
@@ -208,6 +214,8 @@ public class PanelRenderer : MonoBehaviour {
 			}
 		}
 		tasksToGCNext.Clear ();
+		reportImage.SetActive (false);
+		saveFavorite.SetActive (false);
 
 		if (isStereoPanoMode) {
 			yield return StartCoroutine (FetchStereo ());
@@ -312,6 +320,7 @@ public class PanelRenderer : MonoBehaviour {
 			analytics.LogTiming("Loading", s.ElapsedMilliseconds, "Flickr", "FetchPage");
 
 			PanoramaImage image = ExtractFromFlickr (www.text);
+			image.imageInfo = flickrImage;
 			www = null;
 
 			statusMessage.text = "";
@@ -342,7 +351,7 @@ public class PanelRenderer : MonoBehaviour {
 		www = new WWW (STEREO_IMAGES_URL);
 		print ("Fetching page: " + STEREO_IMAGES_URL);
 		yield return www;
-		
+
 		flickrImage = ExtractFromFlickriver (www.text);
 		if (flickrImage != null) {
 			flickrImage.imageId = ExtractIdFromFlickrUrl(flickrImage.url);
@@ -529,6 +538,18 @@ public class PanelRenderer : MonoBehaviour {
 				string shortUrl = "flic.kr/p/" + Base58.Encode(image.imageInfo.imageId);
 				caption.text = "by: " + image.imageInfo.author + " (" + shortUrl + ")";
 				caption.characterSize = 0.3f;
+
+				reportImage.transform.localPosition = new Vector3(0, -0.63f, 0);
+				reportImage.transform.localRotation = Quaternion.identity;
+				TextMesh reportText = reportImage.GetComponent<TextMesh>();
+				reportText.characterSize = 0.3f;
+				reportImage.SetActive(true);
+
+				saveFavorite.transform.localPosition = new Vector3(0, -0.74f, 0);
+				saveFavorite.transform.localRotation = Quaternion.identity;
+				TextMesh saveFavoriteText = saveFavorite.GetComponent<TextMesh>();
+				saveFavoriteText.characterSize = 0.3f;
+				saveFavorite.SetActive(true);
 			}
 			if (rightEyeImg.activeSelf) {
 				rightEyeImg.GetComponent<Renderer>().sharedMaterial = m2;
@@ -545,6 +566,10 @@ public class PanelRenderer : MonoBehaviour {
 				}
 			}
 			taskQueue.Add (new ShowTutorialTask ());
+
+			if (image.imageInfo != null) {
+				currentImageId = image.imageInfo.imageId;
+			}
 
 			StartCoroutine( ProcessTasks () );
 		} catch (System.Exception e) {
@@ -650,7 +675,7 @@ public class PanelRenderer : MonoBehaviour {
 			tutorialOneRepeatEndTime = Time.time + TUTORIAL_ONE_REPEAT_DURATION;
 			
 			TutorialOneRepeatCompleted ();
-		} else if (!analytics.tutorialTwoFinished && analytics.sessionCount >= 3/* && currentRenderMode == 'P'*/) {
+		} else if (!analytics.tutorialTwoFinished && analytics.sessionCount >= 3 && !isStereoImgMode/* && currentRenderMode == 'P'*/) {
 			statusMessage.text = TUTORIAL_TWO_TXT;
 			tutorialOneVisible = false;
 			tutorialOneRepeatVisible = false;
@@ -771,7 +796,7 @@ public class ImageInfo {
 	public int height;
 	public string author;
 	public string title;
-	public long imageId;
+	public long imageId = 0;
 
 	public ImageInfo() {}
 
