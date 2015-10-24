@@ -35,6 +35,8 @@ public class Analytics : MonoBehaviour {
 	public int monoViewCount = 0;
 	[HideInInspector]
 	public int stereoViewCount = 0;
+	[HideInInspector]
+	public int stereoImgViewCount = 0;
 
 
 	/* globals */
@@ -131,6 +133,8 @@ public class Analytics : MonoBehaviour {
 				monoViewCount = int.Parse(sr.ReadLine());
 				string svc = sr.ReadLine();
 				stereoViewCount = (svc != null && !svc.Trim().Equals("") ? int.Parse(svc) : 0);
+				string sivc = sr.ReadLine();
+				stereoImgViewCount = (sivc != null && !sivc.Trim().Equals("") ? int.Parse(sivc) : 0);
 				sr.Close();
 			} catch (System.Exception e) {
 				LogException("Error reading view count file", false);
@@ -230,7 +234,7 @@ public class Analytics : MonoBehaviour {
 
 	public void LogMonoViewCount() {
 		var sw = new StreamWriter(VIEW_COUNT_FILE);
-		sw.Write((++monoViewCount) + "\n" + stereoViewCount);
+		sw.Write((++monoViewCount) + "\n" + stereoViewCount + "\n" + stereoImgViewCount);
 		sw.Close();
 	}
 
@@ -238,7 +242,13 @@ public class Analytics : MonoBehaviour {
 		stereoViewCount = (stereoViewCount + 1) % Recommendations.stereoImages.Count;
 
 		var sw = new StreamWriter(VIEW_COUNT_FILE);
-		sw.Write(monoViewCount + "\n" + stereoViewCount);
+		sw.Write(monoViewCount + "\n" + stereoViewCount + "\n" + stereoImgViewCount);
+		sw.Close();
+	}
+	
+	public void LogStereoImgViewCount() {
+		var sw = new StreamWriter(VIEW_COUNT_FILE);
+		sw.Write(monoViewCount + "\n" + stereoViewCount + "\n" + (++stereoImgViewCount));
 		sw.Close();
 	}
 }

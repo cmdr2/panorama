@@ -72,8 +72,7 @@ public class PanelRenderer : MonoBehaviour {
 
 
 	/* scratchpad */
-	private bool isStereoPanoMode = false;
-	private bool isStereoImgMode = false;
+	private RenderMode renderMode = RenderMode.MONO_PANORAMA;
 
 	private Shader PANORAMA_SHADER;
 	private float rotation = 0f;
@@ -98,9 +97,6 @@ public class PanelRenderer : MonoBehaviour {
 	private float nextHealthCheckTime = -1; // seconds
 
 	private float tiltLockTime = -1; // seconds
-	private ShuffleBag renderOrder;
-	private char currentRenderMode = 'P';
-	private char nextRenderMode = 'P';
 
 	public long currentImageId;
 
@@ -121,10 +117,6 @@ public class PanelRenderer : MonoBehaviour {
 		fetchAudio = GetComponent<AudioSource> ();
 		analytics = GameObject.Find ("Analytics").GetComponent<Analytics>();
 		analytics.Init ();
-
-		/*renderOrder = new ShuffleBag (20);
-		renderOrder.Add ('P', 10);
-		renderOrder.Add ('I', 10);*/
 
 		StartCoroutine (Fetch ());
 	}
@@ -153,7 +145,7 @@ public class PanelRenderer : MonoBehaviour {
 			lastTriggerTime = -100f;
 			// single trigger stuff
 
-			if (currentRenderMode != 'I' && !isStereoImgMode) {
+			if (renderMode == RenderMode.MONO_PANORAMA || renderMode == RenderMode.STEREO_PANORAMA) {
 				rotation += 180f;
 				targetRotation = Quaternion.Euler(0, rotation, 0);
 			}
@@ -175,15 +167,16 @@ public class PanelRenderer : MonoBehaviour {
 
 		if (Cardboard.SDK.Tilted && Time.time > tiltLockTime) {
 			tiltLockTime = Time.time + 5;
-			if (!isStereoPanoMode && !isStereoImgMode) {
-				isStereoPanoMode = true;
-				isStereoImgMode = false;
-			} else if (isStereoPanoMode && !isStereoImgMode) {
-				isStereoPanoMode = false;
-				isStereoImgMode = true;
-			} else {
-				isStereoPanoMode = false;
-				isStereoImgMode = false;
+			switch (renderMode) {
+			case RenderMode.MONO_PANORAMA:
+				renderMode = RenderMode.STEREO_IMAGE;
+				break;
+			case RenderMode.STEREO_IMAGE:
+				renderMode = RenderMode.STEREO_PANORAMA;
+				break;
+			case RenderMode.STEREO_PANORAMA:
+				renderMode = RenderMode.MONO_PANORAMA;
+				break;
 			}
 			StartCoroutine (Fetch (true));
 			Handheld.Vibrate ();
@@ -214,25 +207,19 @@ public class PanelRenderer : MonoBehaviour {
 			}
 		}
 		tasksToGCNext.Clear ();
-		reportImage.SetActive (false);
-		saveFavorite.SetActive (false);
+//		reportImage.SetActive (false);
+//		saveFavorite.SetActive (false);
 
-		if (isStereoPanoMode) {
-			yield return StartCoroutine (FetchStereo ());
-		} else if (isStereoImgMode) {
-			yield return StartCoroutine (FetchStereoImg ());
-		} else {
+		switch (renderMode) {
+		case RenderMode.MONO_PANORAMA:
 			yield return StartCoroutine (FetchMono ());
-			/*currentRenderMode = nextRenderMode;
-			switch (currentRenderMode) {
-			case 'P':
-				yield return StartCoroutine (FetchMono ());
-				break;
-			case 'I':
-				yield return StartCoroutine (FetchStereoImg ());
-				break;
-			}
-			nextRenderMode = renderOrder.Next();*/
+			break;
+		case RenderMode.STEREO_IMAGE:
+			yield return StartCoroutine (FetchStereoImg ());
+			break;
+		case RenderMode.STEREO_PANORAMA:
+			yield return StartCoroutine (FetchStereo ());
+			break;
 		}
 	}
 
@@ -325,7 +312,7 @@ public class PanelRenderer : MonoBehaviour {
 
 			statusMessage.text = "";
 
-			if (!isStereoPanoMode && !isStereoImgMode) {
+			if (renderMode == RenderMode.MONO_PANORAMA) {
 				/* draw! */
 				DrawPanorama (image);
 				ShowInfo (flickrImage);
@@ -372,6 +359,8 @@ public class PanelRenderer : MonoBehaviour {
 			statusMessage.text = "";
 
 			DrawPanorama (image);
+			
+			analytics.LogStereoImgViewCount ();
 		} else {
 			statusMessage.text = "Failed to find a stereo image to show!";
 			analytics.LogException("Failed to extract URL from Flickriver", true);
@@ -539,7 +528,7 @@ public class PanelRenderer : MonoBehaviour {
 				caption.text = "by: " + image.imageInfo.author + " (" + shortUrl + ")";
 				caption.characterSize = 0.3f;
 
-				reportImage.transform.localPosition = new Vector3(0, -0.63f, 0);
+				/*reportImage.transform.localPosition = new Vector3(0, -0.63f, 0);
 				reportImage.transform.localRotation = Quaternion.identity;
 				TextMesh reportText = reportImage.GetComponent<TextMesh>();
 				reportText.characterSize = 0.3f;
@@ -549,7 +538,7 @@ public class PanelRenderer : MonoBehaviour {
 				saveFavorite.transform.localRotation = Quaternion.identity;
 				TextMesh saveFavoriteText = saveFavorite.GetComponent<TextMesh>();
 				saveFavoriteText.characterSize = 0.3f;
-				saveFavorite.SetActive(true);
+				saveFavorite.SetActive(true);*/
 			}
 			if (rightEyeImg.activeSelf) {
 				rightEyeImg.GetComponent<Renderer>().sharedMaterial = m2;
@@ -646,7 +635,7 @@ public class PanelRenderer : MonoBehaviour {
 		www = null;
 		
 		analytics.LogEvent("Panorama", "ImageRendered");
-		if (isStereoPanoMode) statusMessage.text = "";
+		if (renderMode == RenderMode.STEREO_PANORAMA) statusMessage.text = "";
 		if (taskIndex == 0) {
 			firstImageLoadTimeout = Time.time + IMAGE_VIEWING_TIMEOUT_DURATION;
 			analytics.gav3.LogEvent ("Panorama:" + analytics.sessionId, "RenderedBasicImage", "foo", 1);
@@ -675,7 +664,7 @@ public class PanelRenderer : MonoBehaviour {
 			tutorialOneRepeatEndTime = Time.time + TUTORIAL_ONE_REPEAT_DURATION;
 			
 			TutorialOneRepeatCompleted ();
-		} else if (!analytics.tutorialTwoFinished && analytics.sessionCount >= 3 && !isStereoImgMode/* && currentRenderMode == 'P'*/) {
+		} else if (!analytics.tutorialTwoFinished && analytics.sessionCount >= 3 && (renderMode == RenderMode.MONO_PANORAMA || renderMode == RenderMode.STEREO_PANORAMA)) {
 			statusMessage.text = TUTORIAL_TWO_TXT;
 			tutorialOneVisible = false;
 			tutorialOneRepeatVisible = false;
@@ -771,6 +760,10 @@ public class PanelRenderer : MonoBehaviour {
 
 public enum StereoType { // stereotypical enum
 	SBS, OVER_UNDER, OVER_UNDER_INV, CROSS_EYE, NONE
+};
+
+public enum RenderMode {
+	MONO_PANORAMA, STEREO_PANORAMA, STEREO_IMAGE
 };
 
 public class PanoramaImage {
