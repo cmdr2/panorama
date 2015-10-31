@@ -62,7 +62,7 @@ public class PanelRenderer : MonoBehaviour {
 	private const string TUTORIAL_TWO_TXT = "<b>Pro tip, give it a try!</b>\nPush down and leave " +
 		"trigger ONCE and <b>WAIT</b>\nto see behind you.\n<i>(or</i> press Fire1 ONCE and <b>WAIT</b>)";
 
-	private const string FEEDBACK_TXT = "I'd love to hear\nyour suggestions on\nPlay Store";
+	private const string FEEDBACK_TXT = "I'd love to hear\nyour suggestions";
 
 	private const float TUTORIAL_ONE_REPEAT_DURATION = 4.5f; // seconds
 	private const float FEEDBACK_DURATION = 4.5f; // seconds
