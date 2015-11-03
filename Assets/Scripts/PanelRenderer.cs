@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
+using System.IO;
 
 
 /**
@@ -92,6 +93,7 @@ public class PanelRenderer : MonoBehaviour {
 
 	private List<object> taskQueue = new List<object>();
 	private List<object> tasksToGCNext = new List<object>();
+	private List<WWW> networkConns = new List<WWW>();
 
 	private Analytics analytics;
 	private float nextHealthCheckTime = -1; // seconds
@@ -200,13 +202,17 @@ public class PanelRenderer : MonoBehaviour {
 		tasksToGCNext.AddRange (taskQueue);
 		taskQueue = new List<object> ();
 
-		foreach (object o in tasksToGCNext) {
-			if (o is ApplyImageTask) {
-				ApplyImageTask t = (ApplyImageTask)o;
-				t.Dispose();
+		networkConns.ForEach(conn => {
+			try {
+				Destroy(conn.texture);
+			} catch (System.Exception e) {
+				// commit a crime of swallowing exception
 			}
-		}
-		tasksToGCNext.Clear ();
+			conn.Dispose();
+			conn = null;
+		});
+		networkConns.Clear ();
+
 //		reportImage.SetActive (false);
 //		saveFavorite.SetActive (false);
 
@@ -275,6 +281,7 @@ public class PanelRenderer : MonoBehaviour {
 
 			do {
 				www = new WWW (IMAGES_URL);
+				networkConns.Add(www);
 				print ("Fetching page: " + IMAGES_URL);
 				yield return www;
 
@@ -298,6 +305,7 @@ public class PanelRenderer : MonoBehaviour {
 			s.Start();
 
 			www = new WWW (flickrImage.url);
+			networkConns.Add (www);
 			statusMessage.text = "Waiting for www.flickr.com...";
 			print ("Fetching page: " + flickrImage.url);
 			yield return www;
@@ -336,6 +344,7 @@ public class PanelRenderer : MonoBehaviour {
 		statusMessage.text = "Waiting for www.flickriver.com...";
 
 		www = new WWW (STEREO_IMAGES_URL);
+		networkConns.Add (www);
 		print ("Fetching page: " + STEREO_IMAGES_URL);
 		yield return www;
 
@@ -346,6 +355,7 @@ public class PanelRenderer : MonoBehaviour {
 
 		if (flickrImage != null) {
 			www = new WWW (flickrImage.url);
+			networkConns.Add(www);
 			statusMessage.text = "Waiting for www.flickr.com...";
 			print ("Fetching page: " + flickrImage.url);
 			yield return www;
@@ -446,7 +456,6 @@ public class PanelRenderer : MonoBehaviour {
 	private void DrawPanorama(PanoramaImage image){
 		try {
 			taskQueue = new List<object> ();
-			tasksToGCNext = new List<object> ();
 
 			List<Material> mats = null;
 			Material m1 = null, m2 = null;
@@ -581,7 +590,6 @@ public class PanelRenderer : MonoBehaviour {
 			try {
 				t = taskQueue[0];
 				taskQueue.RemoveAt(0);
-				tasksToGCNext.Add(t);
 			} catch (System.Exception e) {
 				analytics.LogException("Error pulling task: " + e.Message + "; " + e.StackTrace, true);
 				continue;
@@ -611,6 +619,7 @@ public class PanelRenderer : MonoBehaviour {
 		WWW www;
 		try {
 			www = new WWW(task.url);
+			networkConns.Add (www);
 		} catch (System.Exception e) {
 			analytics.LogException("Error fetching image url: " + e.Message + "; " + e.StackTrace, true);
 			www = null;
@@ -618,6 +627,11 @@ public class PanelRenderer : MonoBehaviour {
 		}
 		print ("Fetching image: " + task.url);
 		yield return www;
+
+		if (!networkConns.Contains (www)) { // connection was canceled
+			www = null;
+			yield break;
+		}
 		
 		s.Stop();
 		analytics.LogEvent ("Panorama", "DebugGotFlickrImage");
@@ -640,11 +654,15 @@ public class PanelRenderer : MonoBehaviour {
 			firstImageLoadTimeout = Time.time + IMAGE_VIEWING_TIMEOUT_DURATION;
 			analytics.gav3.LogEvent ("Panorama:" + analytics.sessionId, "RenderedBasicImage", "foo", 1);
 			fetchAudio.Play();
+
+			GCOldTasks();
 		} else if (taskIndex == 2) {
 			analytics.LogEvent("Panorama", "LargeImageRendered");
 			ctf.Stop();
 			analytics.LogTiming("Loading", ctf.ElapsedMilliseconds, "Flickr", "LargeImageCTCF");
 		}
+
+		tasksToGCNext.Add(task);
 	}
 	
 	private void ShowTutorial() {
@@ -755,6 +773,26 @@ public class PanelRenderer : MonoBehaviour {
 	
 	private void FeedbackCompleted() {
 		analytics.LogFeedbackDone ();
+	}
+
+	private void GCOldTasks() {
+		foreach (object o in tasksToGCNext) {
+			if (o is ApplyImageTask) {
+				ApplyImageTask t = (ApplyImageTask)o;
+				DisposeApplyImageTask(t);
+			}
+		}
+		tasksToGCNext.Clear ();
+	}
+
+	private void DisposeApplyImageTask(ApplyImageTask task) {
+		task.mats.ForEach(material => {
+			Destroy(material.mainTexture);
+			material.mainTexture = null;
+			Destroy (material);
+			material = null;
+		});
+		task.Dispose ();
 	}
 }
 
