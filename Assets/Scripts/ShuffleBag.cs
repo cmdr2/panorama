@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 
 // http://gamedevelopment.tutsplus.com/tutorials/shuffle-bags-making-random-feel-more-random--gamedev-1249
-public class ShuffleBag {
+public class ShuffleBag<T> {
 	private System.Random random = new System.Random();
-	private List<char> data;
-	
-	private char currentItem;
+	private List<T> data;
+
+	private T currentItem;
 	private int currentPosition = -1;
 	
 	private int Capacity { get { return data.Capacity; } }
@@ -14,10 +14,10 @@ public class ShuffleBag {
 	
 	public ShuffleBag(int initCapacity)
 	{
-		data = new List<char>(initCapacity);
+		data = new List<T>(initCapacity);
 	}
 
-	public void Add(char item, int amount)
+	public void Add(T item, int amount)
 	{
 		for (int i = 0; i < amount; i++)
 			data.Add(item);
@@ -25,7 +25,7 @@ public class ShuffleBag {
 		currentPosition = Size - 1;
 	}
 
-	public char Next()
+	public T Next()
 	{
 		if (currentPosition < 1)
 		{

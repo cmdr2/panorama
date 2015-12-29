@@ -68,8 +68,8 @@ public class PanelRenderer : MonoBehaviour {
 	private const float TUTORIAL_ONE_REPEAT_DURATION = 4.5f; // seconds
 	private const float FEEDBACK_DURATION = 4.5f; // seconds
 
-	private const string IMAGES_URL = "http://www.flickriver.com/groups/equirectangular/pool/random/";
-	private const string STEREO_IMAGES_URL = "http://www.flickriver.com/groups/3d-cross-view/pool/random/";
+	private const string MONO_PANO_IMAGES_BASE = "http://me.cmdr2.org/index/panoramas/equirectangular";
+	private const string STEREO_IMAGES_BASE = "http://me.cmdr2.org/index/panoramas/3d-cross-view";
 
 
 	/* scratchpad */
@@ -101,6 +101,8 @@ public class PanelRenderer : MonoBehaviour {
 	private float tiltLockTime = -1; // seconds
 
 	public long currentImageId;
+	private ShuffleBag<int> monoPanoramaShuffle;
+	private ShuffleBag<int> stereoImagesShuffle;
 
 
 	void Start () {
@@ -119,6 +121,16 @@ public class PanelRenderer : MonoBehaviour {
 		fetchAudio = GetComponent<AudioSource> ();
 		analytics = GameObject.Find ("Analytics").GetComponent<Analytics>();
 		analytics.Init ();
+
+		monoPanoramaShuffle = new ShuffleBag<int> (13755);
+		for (int i = 0; i < 13755; i++) {
+			monoPanoramaShuffle.Add(i, 1);
+		}
+
+		stereoImagesShuffle = new ShuffleBag<int> (4496);
+		for (int i = 0; i < 4497; i++) {
+			stereoImagesShuffle.Add(i, 1);
+		}
 
 		StartCoroutine (Fetch ());
 	}
@@ -171,9 +183,9 @@ public class PanelRenderer : MonoBehaviour {
 			tiltLockTime = Time.time + 5;
 			switch (renderMode) {
 			case RenderMode.MONO_PANORAMA:
-				renderMode = RenderMode.STEREO_IMAGE;
-				break;
-			case RenderMode.STEREO_IMAGE:
+//				renderMode = RenderMode.STEREO_IMAGE;
+//				break;
+//			case RenderMode.STEREO_IMAGE:
 				renderMode = RenderMode.STEREO_PANORAMA;
 				break;
 			case RenderMode.STEREO_PANORAMA:
@@ -204,11 +216,11 @@ public class PanelRenderer : MonoBehaviour {
 
 		networkConns.ForEach(conn => {
 			try {
-				Destroy(conn.texture);
+//				conn.Dispose();
+//				Destroy(conn.texture);
 			} catch (System.Exception e) {
 				// commit a crime of swallowing exception
 			}
-			conn.Dispose();
 			conn = null;
 		});
 		networkConns.Clear ();
@@ -260,70 +272,52 @@ public class PanelRenderer : MonoBehaviour {
 //		analytics.LogEvent ("Panorama", "Requested");
 
 		WWW www;
-//		analytics.LogEvent ("Panorama", "DebugNewWWW");
-		ImageInfo flickrImage;
-//		analytics.LogEvent ("Panorama", "DebugNewImageInfo");
+		PanoramaImage image;
 
 		// first try recommendation
-		flickrImage = GetRecommendedImage (analytics.monoViewCount);
+		image = GetRecommendedImage (analytics.monoViewCount);
 
-//		analytics.LogEvent ("Panorama", "DebugGotRecommendation");
 		analytics.gav3.LogEvent ("Panorama:" + analytics.sessionId, "DebugGotRecommendation", "foo", 1);
 
 		// else get random
-		if (flickrImage == null) {
+		if (image == null) {
 			analytics.LogEvent ("Panorama", "FetchingRandom");
-			statusMessage.text = "Waiting for www.flickriver.com...";
+			statusMessage.text = "Waiting for www.flickr.com...";
 
 			bool censored;
 			Stopwatch s = new Stopwatch();
 			s.Start();
 
 			do {
-				www = new WWW (IMAGES_URL);
+				string url = MONO_PANO_IMAGES_BASE + "/" + monoPanoramaShuffle.Next();
+				www = new WWW (url);
 				networkConns.Add(www);
-				print ("Fetching page: " + IMAGES_URL);
+				print ("Fetching page: " + url);
 				yield return www;
 
-				flickrImage = ExtractFromFlickriver (www.text);
-				if (flickrImage != null) {
-					flickrImage.imageId = ExtractIdFromFlickrUrl(flickrImage.url);
+				try {
+					image = ExtractImageInfo (www.text);
+				} catch (System.Exception e) {
+					analytics.gav3.LogException("Failed to read from index: " + e.Message, true);
 				}
+				www = null;
 
-				censored = IsCensored(flickrImage);
+				censored = IsCensored(image.imageInfo);
 			} while (censored);
 
 			s.Stop();
-			analytics.LogTiming("Loading", s.ElapsedMilliseconds, "Flickriver", "FetchPage");
+			analytics.LogTiming("Loading", s.ElapsedMilliseconds, "cmdr2", "FetchPage");
 		} else {
 			analytics.LogEvent("Panorama", "FetchingRecommendation" + analytics.monoViewCount);
 		}
 
-		if (flickrImage != null) {
-			Stopwatch s = new Stopwatch();
-			analytics.LogEvent("Panorama", "DebugFetchFlickr");
-			s.Start();
-
-			www = new WWW (flickrImage.url);
-			networkConns.Add (www);
-			statusMessage.text = "Waiting for www.flickr.com...";
-			print ("Fetching page: " + flickrImage.url);
-			yield return www;
-
-			s.Stop();
-			analytics.LogEvent("Panorama", "DebugGotFlickr");
-			analytics.LogTiming("Loading", s.ElapsedMilliseconds, "Flickr", "FetchPage");
-
-			PanoramaImage image = ExtractFromFlickr (www.text);
-			image.imageInfo = flickrImage;
-			www = null;
-
+		if (image != null) {
 			statusMessage.text = "";
 
 			if (renderMode == RenderMode.MONO_PANORAMA) {
 				/* draw! */
 				DrawPanorama (image);
-				ShowInfo (flickrImage);
+				ShowInfo (image.imageInfo);
 
 				/* log */
 				analytics.LogMonoViewCount();
@@ -331,40 +325,30 @@ public class PanelRenderer : MonoBehaviour {
 			}
 		} else {
 			statusMessage.text = "Failed to find a panorama to show!";
-			analytics.LogException("Failed to extract URL from Flickriver", true);
+			analytics.gav3.LogException("Failed to show panorama", true);
 		}
 	}
 
 	private IEnumerator FetchStereoImg() {
 		WWW www;
-		ImageInfo flickrImage;
+		PanoramaImage image;
 
 		analytics.gav3.LogEvent ("Panorama:" + analytics.sessionId, "RequestedStereoImg", "foo", 1);
 
-		statusMessage.text = "Waiting for www.flickriver.com...";
+		statusMessage.text = "Waiting for me.cmdr2.org...";
 
-		www = new WWW (STEREO_IMAGES_URL);
+		string url = STEREO_IMAGES_BASE + "/" + stereoImagesShuffle.Next ();
+		www = new WWW (url);
 		networkConns.Add (www);
-		print ("Fetching page: " + STEREO_IMAGES_URL);
+		print ("Fetching page: " + url);
 		yield return www;
 
-		flickrImage = ExtractFromFlickriver (www.text);
-		if (flickrImage != null) {
-			flickrImage.imageId = ExtractIdFromFlickrUrl(flickrImage.url);
-		}
-
-		if (flickrImage != null) {
-			www = new WWW (flickrImage.url);
-			networkConns.Add(www);
-			statusMessage.text = "Waiting for www.flickr.com...";
-			print ("Fetching page: " + flickrImage.url);
-			yield return www;
-
-			PanoramaImage image = ExtractFromFlickr (www.text);
+		image = ExtractImageInfo (www.text);
+		www = null;
+		
+		if (image != null) {
 			image.stereoType = StereoType.CROSS_EYE;
-			flickrImage.width /= 2;
-			image.imageInfo = flickrImage;
-			www = null;
+			image.imageInfo.width /= 2;
 			
 			statusMessage.text = "";
 
@@ -383,26 +367,41 @@ public class PanelRenderer : MonoBehaviour {
 
 	}
 
-	private ImageInfo ExtractFromFlickriver (string body) {
-		var match = Regex.Match(body, @"<a class=""noborder""  target=""_blank""  href=""(\S+)""><img class=""photo-panel-img"" id.+?width=""(\d+)"" height=""(\d+)"".+?alt=""([^""]+)""");
-		var authorMatch = Regex.Match(body, @"by  <a  href="".+?"">([^<]+)</a>");
+	private PanoramaImage ExtractImageInfo (string body) {
+		if (body == null) {
+			return new PanoramaImage();
+		}
+		
+		PanoramaImage image = new PanoramaImage ();
 
-		if (match.Success) {
+		string[] lines = body.Split (new string[]{System.Environment.NewLine}, System.StringSplitOptions.None);
+		if (lines.Length > 0) {
 			ImageInfo flickrImage = new ImageInfo ();
 
-			flickrImage.url = match.Groups [1].Value;
-			flickrImage.width = int.Parse(match.Groups [2].Value);
-			flickrImage.height = int.Parse(match.Groups [3].Value);
-			flickrImage.title = match.Groups [4].Value;
-			flickrImage.author = (authorMatch.Success ? authorMatch.Groups [1].Value : "");
+			flickrImage.url = "";
+			flickrImage.imageId = long.Parse(lines[0]);
+			flickrImage.width = int.Parse(lines[3]);
+			flickrImage.height = int.Parse(lines[4]);
+			flickrImage.title = lines[1];
+			flickrImage.author = lines[2];
 
-			return flickrImage;
-		} else {
-			return null;
+			string smallUrl = lines[5];
+			string mediumUrl = lines[6];
+			string largeUrl = lines[7];
+			string xlargeUrl = lines[8];
+
+			image.url.Add (smallUrl);
+			image.url.Add (mediumUrl);
+			image.url.Add (largeUrl);
+			image.url.Add (xlargeUrl);
+
+			image.imageInfo = flickrImage;
 		}
+
+		return image;
 	}
 
-	private ImageInfo GetRecommendedImage (int idx) {
+	private PanoramaImage GetRecommendedImage (int idx) {
 		return (idx >= 0 && idx < Recommendations.interesting.Length ? Recommendations.interesting [idx] : null);
 	}
 	
@@ -412,40 +411,6 @@ public class PanelRenderer : MonoBehaviour {
 		}
 
 		return Recommendations.censored.Contains (image.imageId);
-	}
-
-	private PanoramaImage ExtractFromFlickr(string body) {
-		if (body == null) {
-			return new PanoramaImage();
-		}
-
-		PanoramaImage image = new PanoramaImage ();
-
-		string[] urls = Regex.Split (body, @"""displayUrl""");
-
-		string smallUrl = "";
-		string mediumUrl = "";
-		string largeUrl = "";
-		string xlargeUrl = "";
-
-		for (int i = 1; i < urls.Length; i++) {
-			smallUrl = (smallUrl.Length == 0 ? MatchUrl(urls[i], @":""(\S+?)"",""width"":100") : smallUrl);
-			mediumUrl = (mediumUrl.Length == 0 ? MatchUrl(urls[i], @":""(\S+)"",""width"":640") : mediumUrl );
-			largeUrl = (largeUrl.Length == 0 ? MatchUrl(urls[i], @":""(\S+)"",""width"":1024") : largeUrl );
-			xlargeUrl = (xlargeUrl.Length == 0 ? MatchUrl(urls[i], @":""(\S+)"",""width"":2048") : xlargeUrl );
-		}
-
-		image.url.Add (smallUrl);
-		image.url.Add (mediumUrl);
-		image.url.Add (largeUrl);
-		image.url.Add (xlargeUrl);
-
-		return image;
-	}
-
-	private long ExtractIdFromFlickrUrl(string flickrUrl) {
-		string[] s = flickrUrl.Split ('/');
-		return long.Parse( s [s.Length - 2] );
 	}
 
 	private string MatchUrl(string body, string regex) {
@@ -813,6 +778,11 @@ public class PanoramaImage {
 
 	public PanoramaImage(List<string> url) {
 		this.url = url;
+	}
+
+	public PanoramaImage(List<string> url, ImageInfo imageInfo) {
+		this.url = url;
+		this.imageInfo = imageInfo;
 	}
 
 	public PanoramaImage(List<string> url, StereoType stereoType) {

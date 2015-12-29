@@ -3,17 +3,73 @@ using System.Collections;
 using System.Collections.Generic;
 
 public class Recommendations {
-	public static ImageInfo[] interesting = new ImageInfo[] {
-		new ImageInfo("http://www.flickr.com/photos/81504125@N00/17126948797/", "Dirk Wandel", "Tulpenland (360 x 180)", 17126948797L),
-		new ImageInfo("http://www.flickr.com/photos/51035756831@N01/2091953040/", "Seb Przd", "Notre Dame de Reims in HDR", 2091953040L),
-		new ImageInfo("http://www.flickr.com/photos/axlemasa/11028304606/", "Masao Nagata", "2013 Tokyo Motor Show", 11028304606L),
-		new ImageInfo("http://www.flickr.com/photos/83248192@N00/767998948/", "HamburgerJung", "Diner in Duckingham Palace", 767998948L),
-		new ImageInfo("http://www.flickr.com/photos/24183489@N00/4439644027/", "Alexandre Duret-Lutz", "Pont d'Iéna / Port de Suffren", 4439644027L),
-		new ImageInfo("http://www.flickr.com/photos/tanjabarnes/21257032388/", "Tanja Barnes", "Bellagio Conservatory & Botanical Gardens", 21257032388L),
-		new ImageInfo("http://www.flickr.com/photos/gporada/21142893594/", "gporada", "Interaktives Völkerschlachtsdenkmal Panorama 360", 21142893594L),
-		new ImageInfo("http://www.flickr.com/photos/globalvoyager/21230969582/", "Nick Hobgood", "Welcome to Leleuvia island", 21230969582L),
-		new ImageInfo("http://www.flickr.com/photos/sitoo/19920239958/", "Sitoo", "Subiendo al Picu", 19920239958L),
-		new ImageInfo("http://www.flickr.com/photos/81504125@N00/10640316634/", "Dirk Wandel", "Aerosol - Arena / number one (360 x 180)", 10640316634L)
+	public static PanoramaImage[] interesting = new PanoramaImage[] {
+		new PanoramaImage(new List<string>() {
+			"http://farm9.staticflickr.com/8727/17126948797_5d8262c873_t.jpg",
+			"http://farm9.staticflickr.com/8727/17126948797_5d8262c873_z.jpg",
+			"http://farm9.staticflickr.com/8727/17126948797_5d8262c873_b.jpg",
+			"http://farm9.staticflickr.com/8727/17126948797_5c082d62d3_k.jpg"
+		}, new ImageInfo("http://www.flickr.com/photos/81504125@N00/17126948797/", "Dirk Wandel", "Tulpenland (360 x 180)", 17126948797L)),
+
+		new PanoramaImage(new List<string>() {
+			"http://farm3.staticflickr.com/2367/2091953040_48d5ae4cee_t.jpg",
+			"http://farm3.staticflickr.com/2367/2091953040_48d5ae4cee_z.jpg",
+			"http://farm3.staticflickr.com/2367/2091953040_48d5ae4cee_b.jpg"
+		}, new ImageInfo("http://www.flickr.com/photos/51035756831@N01/2091953040/", "Seb Przd", "Notre Dame de Reims in HDR", 2091953040L)),
+
+		new PanoramaImage(new List<string>() {
+			"http://farm4.staticflickr.com/3719/11028304606_cc4770d8fc_t.jpg",
+			"http://farm4.staticflickr.com/3719/11028304606_cc4770d8fc_z.jpg",
+			"http://farm4.staticflickr.com/3719/11028304606_cc4770d8fc_b.jpg",
+			"http://farm4.staticflickr.com/3719/11028304606_ce1d7d1c8d_k.jpg"
+		}, new ImageInfo("http://www.flickr.com/photos/axlemasa/11028304606/", "Masao Nagata", "2013 Tokyo Motor Show", 11028304606L)),
+
+		new PanoramaImage(new List<string>() {
+			"http://farm2.staticflickr.com/1387/767998948_9572fa0a28_t.jpg",
+			"http://farm2.staticflickr.com/1387/767998948_9572fa0a28_z.jpg",
+			"http://farm2.staticflickr.com/1387/767998948_9572fa0a28_b.jpg"
+		}, new ImageInfo("http://www.flickr.com/photos/83248192@N00/767998948/", "HamburgerJung", "Diner in Duckingham Palace", 767998948L)),
+
+		new PanoramaImage(new List<string>() {
+			"http://farm5.staticflickr.com/4027/4439644027_29981629fd_t.jpg",
+			"http://farm5.staticflickr.com/4027/4439644027_29981629fd_z.jpg",
+			"http://farm5.staticflickr.com/4027/4439644027_29981629fd_b.jpg"
+		}, new ImageInfo("http://www.flickr.com/photos/24183489@N00/4439644027/", "Alexandre Duret-Lutz", "Pont d'Iéna / Port de Suffren", 4439644027L)),
+
+		new PanoramaImage(new List<string>() {
+			"http://farm1.staticflickr.com/697/21257032388_e99fed3169_t.jpg",
+			"http://farm1.staticflickr.com/697/21257032388_e99fed3169_z.jpg",
+			"http://farm1.staticflickr.com/697/21257032388_e99fed3169_b.jpg",
+			"http://farm1.staticflickr.com/697/21257032388_8172fcbc26_k.jpg"
+		}, new ImageInfo("http://www.flickr.com/photos/tanjabarnes/21257032388/", "Tanja Barnes", "Bellagio Conservatory & Botanical Gardens", 21257032388L)),
+
+		new PanoramaImage(new List<string>() {
+			"http://farm1.staticflickr.com/770/21142893594_cd8ed18823_t.jpg",
+			"http://farm1.staticflickr.com/770/21142893594_cd8ed18823_z.jpg",
+			"http://farm1.staticflickr.com/770/21142893594_cd8ed18823_b.jpg",
+			"http://farm1.staticflickr.com/770/21142893594_74bfb7d919_k.jpg"
+		}, new ImageInfo("http://www.flickr.com/photos/gporada/21142893594/", "gporada", "Interaktives Völkerschlachtsdenkmal Panorama 360", 21142893594L)),
+
+		new PanoramaImage(new List<string>() {
+			"http://farm1.staticflickr.com/661/21230969582_5c642e4b0e_t.jpg",
+			"http://farm1.staticflickr.com/661/21230969582_5c642e4b0e_z.jpg",
+			"http://farm1.staticflickr.com/661/21230969582_5c642e4b0e_b.jpg",
+			"http://farm1.staticflickr.com/661/21230969582_37cee367bd_k.jpg"
+		}, new ImageInfo("http://www.flickr.com/photos/globalvoyager/21230969582/", "Nick Hobgood", "Welcome to Leleuvia island", 21230969582L)),
+
+		new PanoramaImage(new List<string>() {
+			"http://farm1.staticflickr.com/383/19920239958_1ef5480dd0_t.jpg",
+			"http://farm1.staticflickr.com/383/19920239958_1ef5480dd0_z.jpg",
+			"http://farm1.staticflickr.com/383/19920239958_1ef5480dd0_b.jpg",
+			"http://farm1.staticflickr.com/383/19920239958_66331fd64e_k.jpg"
+		}, new ImageInfo("http://www.flickr.com/photos/sitoo/19920239958/", "Sitoo", "Subiendo al Picu", 19920239958L)),
+
+		new PanoramaImage(new List<string>() {
+			"http://farm4.staticflickr.com/3705/10640316634_294ae3ea2d_t.jpg",
+			"http://farm4.staticflickr.com/3705/10640316634_294ae3ea2d_z.jpg",
+			"http://farm4.staticflickr.com/3705/10640316634_294ae3ea2d_b.jpg",
+			"http://farm4.staticflickr.com/3705/10640316634_0bb22bd358_k.jpg"
+		}, new ImageInfo("http://www.flickr.com/photos/81504125@N00/10640316634/", "Dirk Wandel", "Aerosol - Arena / number one (360 x 180)", 10640316634L))
 	};
 
 	public static List<long> censored = new List<long>() {
