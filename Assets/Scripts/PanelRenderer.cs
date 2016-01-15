@@ -122,8 +122,8 @@ public class PanelRenderer : MonoBehaviour {
 		analytics = GameObject.Find ("Analytics").GetComponent<Analytics>();
 		analytics.Init ();
 
-		monoPanoramaShuffle = new ShuffleBag<int> (13755);
-		for (int i = 0; i < 13755; i++) {
+		monoPanoramaShuffle = new ShuffleBag<int> (15003);
+		for (int i = 0; i < 15003; i++) {
 			monoPanoramaShuffle.Add(i, 1);
 		}
 
@@ -281,7 +281,7 @@ public class PanelRenderer : MonoBehaviour {
 
 		// else get random
 		if (image == null) {
-			analytics.LogEvent ("Panorama", "FetchingRandom");
+			analytics.gav3.LogEvent ("Panorama", "FetchingRandom", "foo", 1);
 			statusMessage.text = "Waiting for www.flickr.com...";
 
 			bool censored;
